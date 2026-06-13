@@ -41,6 +41,102 @@ export interface AuditLog {
   created_at: string;
 }
 
+export type Direction = "inbound" | "outbound";
+export type MessageStatus = "queued" | "sent" | "delivered" | "read" | "failed";
+export type MessageTipo =
+  | "text" | "image" | "audio" | "video" | "document" | "ptt" | "sticker" | "system";
+export type WhatsappStatus = "conectado" | "desconectado" | "qr_pendente" | "connecting";
+
+export interface WhatsappInstance extends Timestamps {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  uazapi_instance_id: string | null;
+  uazapi_token: string | null;
+  webhook_secret: string;
+  status: WhatsappStatus;
+  phone_number: string | null;
+  connected_at: string | null;
+  last_seen_at: string | null;
+}
+
+export interface Candidato extends Timestamps {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  telefone: string;
+  cpf: string | null;
+  cep: string | null;
+  idade: number | null;
+  endereco: string | null;
+  tem_veiculo: boolean | null;
+  vaga_interesse: string | null;
+  unidade_id: string | null;
+  etapa: string;
+  origem: string;
+  avatar_url: string | null;
+  tags: string[];
+  notas_internas: string | null;
+  atribuido_a: string | null;
+  score_ia: number | null;
+  parecer_ia: Record<string, unknown> | null;
+  curriculo_url: string | null;
+  status: "ativo" | "contratado" | "reprovado" | "desistente";
+}
+
+export interface Conversation extends Timestamps {
+  id: string;
+  empresa_id: string;
+  candidato_id: string;
+  instance_id: string | null;
+  status: "aberta" | "em_atendimento" | "arquivada";
+  atribuida_a: string | null;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  last_message_direction: Direction | null;
+  unread_count: number;
+  uazapi_chat_id: string | null;
+}
+
+export interface Message {
+  id: string;
+  empresa_id: string;
+  conversation_id: string;
+  uazapi_msg_id: string | null;
+  client_message_id: string | null;
+  direction: Direction;
+  tipo: MessageTipo;
+  conteudo: string | null;
+  midia_url: string | null;
+  midia_mime: string | null;
+  thumbnail_url: string | null;
+  status: MessageStatus;
+  sender_id: string | null;
+  reply_to_provider_id: string | null;
+  metadata: Record<string, unknown>;
+  enviada_em: string;
+  lida_em: string | null;
+  created_at: string;
+}
+
+export interface MessageTemplate extends Timestamps {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  categoria: string | null;
+  conteudo: string;
+  variaveis: string[];
+  ativo: boolean;
+}
+
+export interface WhatsappOptout {
+  id: string;
+  empresa_id: string;
+  telefone: string;
+  motivo: string | null;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -63,6 +159,40 @@ export interface Database {
         Row: AuditLog;
         Insert: Partial<AuditLog> & { acao: string };
         Update: Partial<AuditLog>;
+      };
+      whatsapp_instances: {
+        Row: WhatsappInstance;
+        Insert: Partial<WhatsappInstance> & { empresa_id: string };
+        Update: Partial<WhatsappInstance>;
+      };
+      candidatos: {
+        Row: Candidato;
+        Insert: Partial<Candidato> & { empresa_id: string; telefone: string };
+        Update: Partial<Candidato>;
+      };
+      conversations: {
+        Row: Conversation;
+        Insert: Partial<Conversation> & { empresa_id: string; candidato_id: string };
+        Update: Partial<Conversation>;
+      };
+      messages: {
+        Row: Message;
+        Insert: Partial<Message> & {
+          empresa_id: string;
+          conversation_id: string;
+          direction: Direction;
+        };
+        Update: Partial<Message>;
+      };
+      message_templates: {
+        Row: MessageTemplate;
+        Insert: Partial<MessageTemplate> & { empresa_id: string; nome: string; conteudo: string };
+        Update: Partial<MessageTemplate>;
+      };
+      whatsapp_optouts: {
+        Row: WhatsappOptout;
+        Insert: Partial<WhatsappOptout> & { empresa_id: string; telefone: string };
+        Update: Partial<WhatsappOptout>;
       };
     };
     Views: Record<string, never>;

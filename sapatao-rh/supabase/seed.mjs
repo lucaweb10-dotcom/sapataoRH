@@ -79,7 +79,51 @@ async function main() {
     ativo: true,
   });
   if (pErr) throw pErr;
-  console.log("profile admin pronto. Seed concluído.");
+  console.log("profile admin pronto.");
+
+  // 5) whatsapp instance (idempotente — 1 por empresa)
+  const { data: inst } = await admin
+    .from("whatsapp_instances")
+    .select("id")
+    .eq("empresa_id", empresa.id)
+    .maybeSingle();
+  if (!inst) {
+    await admin.from("whatsapp_instances").insert({
+      empresa_id: empresa.id,
+      nome: "WhatsApp RH",
+      status: "desconectado",
+    });
+    console.log("whatsapp instance criada");
+  } else {
+    console.log("whatsapp instance já existe");
+  }
+
+  // 6) templates de triagem (idempotente por nome)
+  const templates = [
+    { nome: "Idade ≥18", conteudo: "Olá! Para seguirmos, você já tem 18 anos ou mais?" },
+    { nome: "CEP", conteudo: "Qual o seu CEP? Assim avaliamos a distância até a unidade." },
+    { nome: "Veículo próprio", conteudo: "Você tem veículo próprio ou outro meio de locomoção?" },
+    { nome: "Vaga de interesse", conteudo: "Qual vaga te interessa? (Frentista, Caixa, Atendente, Cozinha...)" },
+    { nome: "Pede currículo", conteudo: "Pode nos enviar seu currículo por aqui? (PDF ou foto)" },
+  ];
+  for (const tpl of templates) {
+    const { data: ex } = await admin
+      .from("message_templates")
+      .select("id")
+      .eq("empresa_id", empresa.id)
+      .eq("nome", tpl.nome)
+      .maybeSingle();
+    if (!ex) {
+      await admin.from("message_templates").insert({
+        empresa_id: empresa.id,
+        nome: tpl.nome,
+        categoria: "filtro_inicial",
+        conteudo: tpl.conteudo,
+        variaveis: [],
+      });
+    }
+  }
+  console.log("templates de triagem prontos. Seed concluído.");
 }
 
 main().catch((e) => {
