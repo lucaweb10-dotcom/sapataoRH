@@ -37,7 +37,10 @@ export function Composer({ conversationId }: Props) {
             clientMessageId: payload.clientMessageId,
           }),
         });
-        return { ok: res.ok };
+        // The worker marks the bubble 'failed' on throw; throw on HTTP error so a
+        // failed send (e.g. no UAZAPI -> 502) doesn't render as sent.
+        if (!res.ok) throw new Error(`send failed: ${res.status}`);
+        return { ok: true };
       },
     );
   }
