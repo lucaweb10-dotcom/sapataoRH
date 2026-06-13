@@ -21,6 +21,14 @@
 - **Tests:** `npm test` runs `vitest run`. Each logic task is TDD: write failing test → run (red) → implement → run (green) → commit.
 - **Commits:** small and frequent, conventional-commit style, from repo root.
 
+## Next.js 16 notes (breaking changes vs. older docs)
+
+The scaffold installed **Next.js 16.2.9 + React 19.2.4**. `sapatao-rh/AGENTS.md` warns this version differs from older training data. Relevant to this plan:
+- **Middleware is now Proxy** — use `proxy.ts` at the project root with `export function proxy(request)` (or default export). Same behavior as middleware. (Affects Task E1.)
+- `cookies()` / `headers()` from `next/headers` are **async** — always `await` them (reflected in the server client + route handlers below).
+- `next/font/google`, Route Handlers (`route.ts` with `GET/POST`), and Server Actions + `useActionState` work as written here.
+- If anything Next-specific looks off during implementation, consult `node_modules/next/dist/docs/01-app/...`.
+
 ---
 
 ## File Structure (created across this plan)
@@ -51,14 +59,14 @@ sapatao-rh/
 │   ├── supabase/browser.ts
 │   ├── supabase/server.ts
 │   ├── supabase/admin.ts
-│   ├── supabase/middleware.ts
+│   ├── supabase/session.ts            # updateSession helper (used by proxy.ts)
 │   ├── auth/rbac.ts                    # pure RBAC helpers (TDD)
 │   ├── auth/current-profile.ts         # getCurrentProfile (server)
 │   ├── usuarios/create-usuario.ts      # user-creation service (TDD)
 │   └── validations/usuarios.ts         # Zod schemas (TDD)
 ├── stores/unidade-store.ts             # Zustand: selected unidade
 ├── types/database.ts                   # hand-written DB types (SP0 tables)
-├── middleware.ts
+├── proxy.ts                            # Next 16: middleware is now "proxy"
 ├── supabase/
 │   ├── config.toml                     # auth hook config
 │   ├── migrations/0001_tables.sql
@@ -1211,11 +1219,13 @@ git commit -m "feat(sp0): user-creation service (admin api, injectable) [tdd]"
 
 # Phase E — Auth
 
-### Task E1: Middleware (session refresh + route protection)
+### Task E1: Proxy (session refresh + route protection) — Next.js 16
 
-**Files:** Create: `sapatao-rh/lib/supabase/middleware.ts`, `sapatao-rh/middleware.ts`
+**Files:** Create: `sapatao-rh/lib/supabase/session.ts`, `sapatao-rh/proxy.ts`
 
-- [ ] **Step 1: `lib/supabase/middleware.ts`**
+> Next.js 16 renamed Middleware → **Proxy**: a `proxy.ts` at the project root exporting a `proxy` function. Same behavior as middleware.
+
+- [ ] **Step 1: `lib/supabase/session.ts`**
 
 ```ts
 import { createServerClient } from "@supabase/ssr";
@@ -1264,13 +1274,13 @@ export async function updateSession(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 2: `middleware.ts`** (project root inside `sapatao-rh/`)
+- [ ] **Step 2: `proxy.ts`** (project root inside `sapatao-rh/`)
 
 ```ts
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/session";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
@@ -1290,8 +1300,8 @@ Expected: build OK (middleware compiles).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add sapatao-rh/lib/supabase/middleware.ts sapatao-rh/middleware.ts
-git commit -m "feat(sp0): auth middleware (session refresh + route guard)"
+git add sapatao-rh/lib/supabase/session.ts sapatao-rh/proxy.ts
+git commit -m "feat(sp0): auth proxy (session refresh + route guard)"
 ```
 
 ---
