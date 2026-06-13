@@ -1,0 +1,11 @@
+# Supabase project config (reference). Migrations are applied via `npm run migrate`
+# (supabase/migrate.mjs) using SUPABASE_DB_URL — not the Supabase CLI.
+project_id = "qysnyiufifgldieqnsly"
+
+# Custom Access Token Hook (OPTIONAL — see migrations/0003_access_token_hook.sql).
+# The app works without it (RLS helpers fall back to a profiles lookup). To enable on
+# the remote project for performance: Dashboard > Authentication > Hooks >
+# Custom Access Token > select public.custom_access_token_hook.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
