@@ -208,8 +208,11 @@ Regras de visibilidade por role (também usadas no shell):
 
 Script de seed (idempotente) cria:
 1. Empresa **"Estação Sapatão"** (slug `estacao-sapatao`).
-2. Unidades **Novo Hamburgo** e **Estância Velha**.
-3. Primeiro usuário **admin** (e-mail/senha do Lucas) via admin API + `profiles` (role `admin`, `platform_admin = true`, acesso às duas unidades).
+2. Unidade **Novo Hamburgo** (Estância Velha será cadastrada depois, pela UI de unidades).
+3. Primeiro usuário **admin** via admin API + `profiles`:
+   - e-mail: `lucas.a2weber@gmail.com`
+   - senha: **temporária**, lida de `SEED_ADMIN_PASSWORD` no `.env.local` (gitignored) — não é versionada. Trocar no primeiro acesso (ver §13).
+   - role `admin`, `platform_admin = true`, acesso à unidade Novo Hamburgo.
 
 UI de criação/gestão de **novas empresas** fica **deferida** (fora da SP0).
 
@@ -265,7 +268,7 @@ Meta do PRD: **≥60% em lógica de negócio**. Alvos de teste na SP0:
 ## 12. Critérios de aceitação da SP0
 
 1. App sobe local sem erros; `/login` renderiza.
-2. Seed cria Estação Sapatão + 2 unidades + admin; admin loga com sucesso.
+2. Seed cria Estação Sapatão + unidade Novo Hamburgo + admin; admin loga com sucesso.
 3. Admin cria usuário de RH (e-mail+senha+role+unidades) em Configurações > Acessos.
 4. Usuário RH loga e vê apenas os itens de menu do seu role; não acessa Configurações (bloqueio na nav e no server).
 5. Isolamento por empresa comprovado: queries só retornam dados da empresa do usuário (RLS).
@@ -282,6 +285,7 @@ Meta do PRD: **≥60% em lógica de negócio**. Alvos de teste na SP0:
 | Service role vazar para o client | Usado **só** em route handlers server-side; nunca importado em componentes client; var de ambiente server-only. |
 | Custom Access Token Hook mal configurado → RLS sem `empresa_id` | Passo de setup explícito no plano + teste que falha se claim ausente. Fallback: `current_empresa_id()` retorna null → default-deny. |
 | Credenciais expostas no chat | `.env.local` no `.gitignore`; recomendado **rotacionar** as chaves Supabase no painel. |
+| Senha do admin fraca (`REDACTED`) | Senha **temporária** de desenvolvimento; só no `.env.local` (não versionada). Forçar/recomendar troca no primeiro acesso. |
 | Paleta não-oficial | Tokens marcados como provisórios; validar manual da marca antes do go-live. |
 
 ---
