@@ -10,3 +10,10 @@ export const connectInputSchema = z.object({
 
 export type WebhookParams = z.infer<typeof webhookParamsSchema>;
 export type ConnectInput = z.infer<typeof connectInputSchema>;
+
+export const sendMessageSchema = z.object({
+  conversationId: z.uuid(),
+  texto: z.string().min(1, "Mensagem vazia"),
+  clientMessageId: z.uuid(),
+});
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
