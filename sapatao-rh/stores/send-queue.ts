@@ -64,6 +64,11 @@ export const queueReducers = { enqueue, nextPending, markStatus, retry, prune };
 // ── running set: prevents concurrent processing per conversation ───────────────
 const running = new Set<string>();
 
+/** Test-only seam: reset module-level state between tests. */
+export function __resetForTests() {
+  running.clear();
+}
+
 // ── Zustand store ─────────────────────────────────────────────────────────────
 
 interface SendQueueStore {

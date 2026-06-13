@@ -7,7 +7,8 @@ export interface SendDeps {
   insertQueued: (row: {
     empresaId: string; conversationId: string; texto: string; clientMessageId: string; senderId: string;
   }) => Promise<{ id: string | null; error: { code?: string; message?: string } | null }>;
-  reuseFailed: (messageId: string) => Promise<{ error: { message?: string } | null }>;
+  /** Atomic claim: flips status queued only if the row was still failed (rows-affected === 1 → claimed:true). */
+  reuseFailed: (messageId: string) => Promise<{ claimed: boolean; error: { message?: string } | null }>;
   updateResult: (
     messageId: string,
     fields: { status: "sent"; uazapi_msg_id: string } | { status: "failed"; error: string },
@@ -21,7 +22,7 @@ export interface SendInput {
 
 export type SendResult =
   | { ok: true; messageId: string }
-  | { ok: false; error: "optout" | "context_error" | "send_failed"; messageId?: string };
+  | { ok: false; error: "optout" | "context_error" | "send_failed" | "insert_failed" | "reuse_failed"; messageId?: string };
 
 export async function enviarMensagem(input: SendInput, deps: SendDeps): Promise<SendResult> {
   const ctx = await deps.loadContext(input.conversationId);
@@ -30,6 +31,7 @@ export async function enviarMensagem(input: SendInput, deps: SendDeps): Promise<
   // Idempotency
   const existing = await deps.findByClientId(input.clientMessageId);
   if (existing && existing.status !== "failed") {
+    // SP1b: a 'queued' orphan (crash-before-send) is intentionally treated as a no-op; no server requeue out of scope.
     return { ok: true, messageId: existing.id }; // double-submit no-op
   }
 
@@ -39,7 +41,15 @@ export async function enviarMensagem(input: SendInput, deps: SendDeps): Promise<
 
   let messageId: string;
   if (existing && existing.status === "failed") {
-    await deps.reuseFailed(existing.id); // back to queued
+    // Atomic claim: only this caller proceeds when rows-affected === 1.
+    const claim = await deps.reuseFailed(existing.id);
+    if (claim.error) {
+      return { ok: false, error: "reuse_failed", messageId: existing.id };
+    }
+    if (!claim.claimed) {
+      // Another concurrent retry already claimed this row — treat as no-op.
+      return { ok: true, messageId: existing.id };
+    }
     messageId = existing.id;
   } else {
     const ins = await deps.insertQueued({
@@ -50,10 +60,14 @@ export async function enviarMensagem(input: SendInput, deps: SendDeps): Promise<
       senderId: input.senderId,
     });
     if (!ins.id) {
-      // race on the unique index → re-select the winning row
-      const winner = await deps.findByClientId(input.clientMessageId);
-      if (winner) return { ok: true, messageId: winner.id };
-      return { ok: false, error: "context_error" };
+      if (ins.error?.code === "23505") {
+        // Unique-index race — re-select the winning row.
+        const winner = await deps.findByClientId(input.clientMessageId);
+        if (winner) return { ok: true, messageId: winner.id };
+      }
+      // Real insert failure or 23505 with no winner found.
+      console.error(ins.error?.message);
+      return { ok: false, error: "insert_failed" };
     }
     messageId = ins.id;
   }
@@ -63,6 +77,10 @@ export async function enviarMensagem(input: SendInput, deps: SendDeps): Promise<
     await deps.updateResult(messageId, { status: "failed", error: sent.error ?? "send_failed" });
     return { ok: false, error: "send_failed", messageId };
   }
-  await deps.updateResult(messageId, { status: "sent", uazapi_msg_id: sent.providerId });
+  const upd = await deps.updateResult(messageId, { status: "sent", uazapi_msg_id: sent.providerId });
+  if (upd.error) {
+    // Logged inconsistency — message sent but status flip failed; the webhook reconciles.
+    console.error(upd.error.message);
+  }
   return { ok: true, messageId };
 }

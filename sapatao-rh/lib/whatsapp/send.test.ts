@@ -9,7 +9,7 @@ function makeDeps(over: Partial<SendDeps> = {}): SendDeps {
     isOptedOut: vi.fn(async () => false),
     findByClientId: vi.fn(async () => null),
     insertQueued: vi.fn(async () => ({ id: "msg-1", error: null })),
-    reuseFailed: vi.fn(async () => ({ error: null })),
+    reuseFailed: vi.fn(async () => ({ claimed: true, error: null })),
     updateResult: vi.fn(async () => ({ error: null })),
     sendText: vi.fn(async () => ({ providerId: "PROV-1" })),
     ...over,
@@ -56,5 +56,70 @@ describe("enviarMensagem", () => {
     const deps = makeDeps({ loadContext: vi.fn(async () => null) });
     const r = await enviarMensagem(input, deps);
     expect(r).toEqual({ ok: false, error: "context_error" });
+  });
+
+  // ── new: insert-race scenarios ────────────────────────────────────────────────
+
+  it("race-win: 23505 + winner found → ok with winner id, no send", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23505" } })),
+      findByClientId: vi
+        .fn()
+        .mockResolvedValueOnce(null) // first call (idempotency check) → no existing row
+        .mockResolvedValueOnce({ id: "msg-win", status: "queued" as const }), // second call (race re-select)
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r).toEqual({ ok: true, messageId: "msg-win" });
+    expect(deps.sendText).not.toHaveBeenCalled();
+  });
+
+  it("race-no-winner / insert_failed: 23505 but no winner found → insert_failed", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23505" } })),
+      findByClientId: vi.fn(async () => null), // both calls return null
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r).toEqual({ ok: false, error: "insert_failed" });
+  });
+
+  it("non-23505 insert error → insert_failed (not masked as context_error)", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23502", message: "not null" } })),
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r).toEqual({ ok: false, error: "insert_failed" });
+  });
+
+  // ── new: reuseFailed concurrency scenarios ────────────────────────────────────
+
+  it("reuseFailed error → reuse_failed, sendText not called", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as const })),
+      reuseFailed: vi.fn(async () => ({ claimed: false, error: { message: "boom" } })),
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r).toEqual({ ok: false, error: "reuse_failed", messageId: "msg-f" });
+    expect(deps.sendText).not.toHaveBeenCalled();
+  });
+
+  it("reuseFailed not claimed (concurrent) → ok no-op, sendText not called", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as const })),
+      reuseFailed: vi.fn(async () => ({ claimed: false, error: null })),
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r).toEqual({ ok: true, messageId: "msg-f" });
+    expect(deps.sendText).not.toHaveBeenCalled();
+  });
+
+  // ── new: updateResult error still returns ok (message went out) ───────────────
+
+  it("updateResult error on sent path still returns ok (message sent, webhook reconciles)", async () => {
+    const deps = makeDeps({
+      updateResult: vi.fn(async () => ({ error: { message: "x" } })),
+      sendText: vi.fn(async () => ({ providerId: "PROV-2" })),
+    });
+    const r = await enviarMensagem(input, deps);
+    expect(r.ok).toBe(true);
   });
 });
