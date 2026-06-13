@@ -28,44 +28,44 @@ export default async function AcessosPage() {
 
   return (
     <PageContainer>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Acessos</h1>
-          <p className="text-sm text-neutro-700">
-            Usuários e níveis de acesso da empresa.
-          </p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold">Acessos</h1>
+            <p className="text-sm text-neutro-700">
+              Usuários e níveis de acesso da empresa.
+            </p>
+          </div>
+          <NovoUsuarioForm unidades={(unidades ?? []) as Unidade[]} />
         </div>
-        <NovoUsuarioForm unidades={(unidades ?? []) as Unidade[]} />
-      </div>
 
-      <div className="rounded-lg border border-neutro-200 bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>E-mail</TableHead>
-              <TableHead>Papel</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {((usuarios ?? []) as Profile[]).map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="font-medium">{u.nome}</TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell className="capitalize">{u.role}</TableCell>
-                <TableCell>
-                  <Badge variant={u.ativo ? "default" : "secondary"}>
-                    {u.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </TableCell>
+        <div className="rounded-lg border border-neutro-200 bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Papel</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {((usuarios ?? []) as Profile[]).map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">{u.nome}</TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell className="capitalize">{u.role}</TableCell>
+                  <TableCell>
+                    <Badge variant={u.ativo ? "default" : "secondary"}>
+                      {u.ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
     </PageContainer>
   );
 }

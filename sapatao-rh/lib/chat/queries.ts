@@ -4,7 +4,7 @@ import type { Candidato, Conversation, Message } from "@/types/database";
 
 // Conversations with embedded candidato data (PostgREST embed)
 export type ConversationWithCandidato = Conversation & {
-  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags"> | null;
+  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone"> | null;
 };
 
 export type ThreadResult = {
@@ -18,7 +18,7 @@ export async function listConversations(): Promise<ConversationWithCandidato[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("conversations")
-    .select("*, candidatos(nome, avatar_url, tags)")
+    .select("*, candidatos(nome, avatar_url, tags, telefone)")
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
   if (error) {

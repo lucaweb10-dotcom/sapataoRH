@@ -113,7 +113,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
 
     // Unknown instance or bad secret → silent 200 (do not leak existence).
     if (!inst) return NextResponse.json({ ok: true });
-    if (inst.webhook_secret && secret !== inst.webhook_secret) {
+    // Fail closed: reject if the instance has no secret or the secret doesn't match.
+    if (!inst.webhook_secret || secret !== inst.webhook_secret) {
       return NextResponse.json({ ok: true });
     }
 

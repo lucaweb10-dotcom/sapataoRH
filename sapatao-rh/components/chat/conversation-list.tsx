@@ -55,8 +55,7 @@ export function ConversationList({ conversations, activeId }: Props) {
     return conversations.filter((c) => {
       const nome = normalize(c.candidatos?.nome ?? "");
       const preview = normalize(c.last_message_preview ?? "");
-      // telefone comes from conversation via candidatos or a direct field; try uazapi_chat_id as fallback
-      const telefone = normalize(c.uazapi_chat_id ?? "");
+      const telefone = normalize(c.candidatos?.telefone ?? "");
       return nome.includes(q) || preview.includes(q) || telefone.includes(q);
     });
   }, [conversations, query]);
