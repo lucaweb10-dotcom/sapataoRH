@@ -11,6 +11,7 @@ import { ConversationList } from "@/components/chat/conversation-list";
 import { MessageThread } from "@/components/chat/message-thread";
 import { CandidatePanel } from "@/components/chat/candidate-panel";
 import { ChatRealtime } from "@/components/chat/realtime";
+import { MarkRead } from "@/components/chat/mark-read";
 import type { Candidato } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -79,8 +80,9 @@ export default async function ChatPage({
         </div>
       )}
 
-      {/* Realtime subscription */}
+      {/* Realtime subscription + mark-read on open */}
       {empresaId && <ChatRealtime empresaId={empresaId} />}
+      {displayedConvId && <MarkRead conversationId={displayedConvId} />}
     </div>
   );
 }

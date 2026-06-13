@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseUazapiEvent } from "@/lib/uazapi/webhook-parser";
 import { handleInboundMessage, type DbLike } from "@/lib/whatsapp/inbound";
+import { advanceStatus } from "@/lib/whatsapp/status";
 import type { MessageTipo } from "@/types/database";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -131,8 +132,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
         .from("whatsapp_instances")
         .update({ status: CONNECTION_STATUS[event.state], last_seen_at: new Date().toISOString() })
         .eq("id", inst.id);
+    } else if (event.kind === "status" && event.status !== "deleted") {
+      // Forward-only delivery status (sent < delivered < read; failed terminal).
+      const { data: msg } = await admin
+        .from("messages")
+        .select("id, status")
+        .eq("empresa_id", inst.empresa_id)
+        .eq("uazapi_msg_id", event.providerMessageId)
+        .maybeSingle();
+      if (msg) {
+        const next = advanceStatus(msg.status, event.status);
+        if (next !== msg.status) {
+          await admin.from("messages").update({ status: next }).eq("id", msg.id);
+        }
+      }
     }
-    // status events (messages_update) are handled in SP1b.
 
     return NextResponse.json({ ok: true });
   } catch (e) {
