@@ -2,7 +2,7 @@ export type Role = "admin" | "rh" | "gestor_unidade" | "viewer";
 
 type Timestamps = { created_at: string; updated_at: string };
 
-export interface Empresa extends Timestamps {
+export type Empresa = Timestamps & {
   id: string;
   nome: string;
   slug: string;
@@ -10,7 +10,7 @@ export interface Empresa extends Timestamps {
   ativa: boolean;
 }
 
-export interface Unidade extends Timestamps {
+export type Unidade = Timestamps & {
   id: string;
   empresa_id: string;
   nome: string;
@@ -19,7 +19,7 @@ export interface Unidade extends Timestamps {
   ativa: boolean;
 }
 
-export interface Profile extends Timestamps {
+export type Profile = Timestamps & {
   id: string;
   empresa_id: string;
   nome: string;
@@ -30,7 +30,7 @@ export interface Profile extends Timestamps {
   ativo: boolean;
 }
 
-export interface AuditLog {
+export type AuditLog = {
   id: string;
   empresa_id: string | null;
   ator_id: string | null;
@@ -47,7 +47,7 @@ export type MessageTipo =
   | "text" | "image" | "audio" | "video" | "document" | "ptt" | "sticker" | "system";
 export type WhatsappStatus = "conectado" | "desconectado" | "qr_pendente" | "connecting";
 
-export interface WhatsappInstance extends Timestamps {
+export type WhatsappInstance = Timestamps & {
   id: string;
   empresa_id: string;
   nome: string;
@@ -60,7 +60,7 @@ export interface WhatsappInstance extends Timestamps {
   last_seen_at: string | null;
 }
 
-export interface Candidato extends Timestamps {
+export type Candidato = Timestamps & {
   id: string;
   empresa_id: string;
   nome: string;
@@ -84,7 +84,7 @@ export interface Candidato extends Timestamps {
   status: "ativo" | "contratado" | "reprovado" | "desistente";
 }
 
-export interface Conversation extends Timestamps {
+export type Conversation = Timestamps & {
   id: string;
   empresa_id: string;
   candidato_id: string;
@@ -98,7 +98,7 @@ export interface Conversation extends Timestamps {
   uazapi_chat_id: string | null;
 }
 
-export interface Message {
+export type Message = {
   id: string;
   empresa_id: string;
   conversation_id: string;
@@ -119,7 +119,7 @@ export interface Message {
   created_at: string;
 }
 
-export interface MessageTemplate extends Timestamps {
+export type MessageTemplate = Timestamps & {
   id: string;
   empresa_id: string;
   nome: string;
@@ -129,7 +129,7 @@ export interface MessageTemplate extends Timestamps {
   ativo: boolean;
 }
 
-export interface WhatsappOptout {
+export type WhatsappOptout = {
   id: string;
   empresa_id: string;
   telefone: string;
@@ -144,36 +144,43 @@ export interface Database {
         Row: Empresa;
         Insert: Partial<Empresa> & { nome: string; slug: string };
         Update: Partial<Empresa>;
+        Relationships: [];
       };
       unidades: {
         Row: Unidade;
         Insert: Partial<Unidade> & { empresa_id: string; nome: string };
         Update: Partial<Unidade>;
+        Relationships: [];
       };
       profiles: {
         Row: Profile;
         Insert: Partial<Profile> & { id: string; empresa_id: string; nome: string; email: string };
         Update: Partial<Profile>;
+        Relationships: [];
       };
       audit_log: {
         Row: AuditLog;
         Insert: Partial<AuditLog> & { acao: string };
         Update: Partial<AuditLog>;
+        Relationships: [];
       };
       whatsapp_instances: {
         Row: WhatsappInstance;
         Insert: Partial<WhatsappInstance> & { empresa_id: string };
         Update: Partial<WhatsappInstance>;
+        Relationships: [];
       };
       candidatos: {
         Row: Candidato;
         Insert: Partial<Candidato> & { empresa_id: string; telefone: string };
         Update: Partial<Candidato>;
+        Relationships: [];
       };
       conversations: {
         Row: Conversation;
         Insert: Partial<Conversation> & { empresa_id: string; candidato_id: string };
         Update: Partial<Conversation>;
+        Relationships: [];
       };
       messages: {
         Row: Message;
@@ -183,16 +190,19 @@ export interface Database {
           direction: Direction;
         };
         Update: Partial<Message>;
+        Relationships: [];
       };
       message_templates: {
         Row: MessageTemplate;
         Insert: Partial<MessageTemplate> & { empresa_id: string; nome: string; conteudo: string };
         Update: Partial<MessageTemplate>;
+        Relationships: [];
       };
       whatsapp_optouts: {
         Row: WhatsappOptout;
         Insert: Partial<WhatsappOptout> & { empresa_id: string; telefone: string };
         Update: Partial<WhatsappOptout>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

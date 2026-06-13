@@ -96,11 +96,16 @@ export async function disconnectInstance(token: string): Promise<void> {
   });
 }
 
-/** Register a webhook URL for an instance. */
+/** Register a webhook URL for an instance. Path per the UAZAPI OpenAPI (validate live). */
 export async function registerWebhook(token: string, url: string): Promise<void> {
-  await apiFetch("/instance/webhook", {
+  await apiFetch("/webhook", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({
+      enabled: true,
+      url,
+      events: ["messages", "messages_update", "connection"],
+      excludeMessages: ["wasSentByApi"],
+    }),
   });
 }
