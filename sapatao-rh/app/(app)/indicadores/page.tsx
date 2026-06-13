@@ -1,5 +1,10 @@
 import { ComingSoon } from "@/components/shared/coming-soon";
+import { PageContainer } from "@/components/shell/page-container";
 
 export default function Page() {
-  return <ComingSoon title="Indicadores" />;
+  return (
+    <PageContainer>
+      <ComingSoon title="Indicadores" />
+    </PageContainer>
+  );
 }

@@ -39,7 +39,7 @@ export default async function AppLayout({
       <Sidebar role={profile.role} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar profile={profile} unidades={visiveis} />
-        <main className="flex-1 overflow-auto bg-neutro-50 p-6">{children}</main>
+        <main className="flex-1 overflow-hidden bg-neutro-50">{children}</main>
       </div>
       <Toaster />
     </div>

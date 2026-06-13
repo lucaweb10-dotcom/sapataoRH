@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PageContainer } from "@/components/shell/page-container";
 
 export default async function AcessosPage() {
   const profile = await getCurrentProfile();
@@ -26,6 +27,7 @@ export default async function AcessosPage() {
   ]);
 
   return (
+    <PageContainer>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -64,5 +66,6 @@ export default async function AcessosPage() {
         </Table>
       </div>
     </div>
+    </PageContainer>
   );
 }
