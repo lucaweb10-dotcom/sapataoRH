@@ -7,18 +7,20 @@ export const loginSchema = z.object({
 
 export const roleSchema = z.enum(["admin", "rh", "gestor_unidade", "viewer"]);
 
+const uuidSchema = z.uuid();
+
 export const createUsuarioSchema = z.object({
   nome: z.string().min(2, "Informe o nome"),
   email: z.string().email("E-mail inválido"),
   senha: z.string().min(6, "Mínimo de 6 caracteres"),
   role: roleSchema,
-  unidades_acesso: z.array(z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "UUID inválido")).default([]),
+  unidades_acesso: z.array(uuidSchema).default([]),
 });
 
 export const editUsuarioSchema = z.object({
-  id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "UUID inválido"),
+  id: uuidSchema,
   role: roleSchema,
-  unidades_acesso: z.array(z.string().uuid()).default([]),
+  unidades_acesso: z.array(uuidSchema).default([]),
   ativo: z.boolean(),
 });
 

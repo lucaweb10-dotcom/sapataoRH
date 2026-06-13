@@ -40,7 +40,7 @@ describe("createUsuario", () => {
   });
 
   it("creates the auth user with email_confirm and inserts the profile in the actor's empresa", async () => {
-    const insert = vi.fn(async () => ({ error: null }));
+    const insert = vi.fn(async (_row: unknown) => ({ error: null }));
     const admin = makeAdmin({ from: vi.fn(() => ({ insert })) as AdminLike["from"] });
     const res = await createUsuario(input, actor, admin);
 

@@ -16,7 +16,7 @@ describe("createUsuarioSchema", () => {
     email: "maria@sapatao.com",
     senha: "trocar123",
     role: "rh",
-    unidades_acesso: ["11111111-1111-1111-1111-111111111111"],
+    unidades_acesso: ["11111111-1111-4111-8111-111111111111"],
   };
   it("accepts a valid payload", () => {
     expect(createUsuarioSchema.safeParse(ok).success).toBe(true);
