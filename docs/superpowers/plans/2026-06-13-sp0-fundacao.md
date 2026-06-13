@@ -17,7 +17,7 @@
 - **Working dir:** all `npm`/`npx` commands run inside `sapatao-rh/` unless stated. Git runs from the repo root (parent).
 - **Project ref:** `qysnyiufifgldieqnsly` · **Supabase URL:** `https://qysnyiufifgldieqnsly.supabase.co`
 - **Secrets** (anon key, service role, DB password, seed admin password) live ONLY in `sapatao-rh/.env.local` (gitignored). Never hardcode them in committed files. They were provided by the user out-of-band.
-- **DB password contains `@`** → URL-encode as `%40` in any connection string (`DB_PASSWORD` → `URLENCODED_PASSWORD`).
+- **DB password contains `@`** → URL-encode it as `%40` in any connection string (e.g. `pass@word` → `pass%40word`). The real value lives only in `.env.local`.
 - **Tests:** `npm test` runs `vitest run`. Each logic task is TDD: write failing test → run (red) → implement → run (green) → commit.
 - **Commits:** small and frequent, conventional-commit style, from repo root.
 
@@ -250,9 +250,9 @@ SEED_ADMIN_PASSWORD=change-me
   - `NEXT_PUBLIC_SUPABASE_URL=https://qysnyiufifgldieqnsly.supabase.co`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>`
   - `SUPABASE_SERVICE_ROLE_KEY=<service role key>`
-  - `SUPABASE_DB_URL=postgresql://postgres:URLENCODED_PASSWORD@db.qysnyiufifgldieqnsly.supabase.co:5432/postgres`
+  - `SUPABASE_DB_URL=postgresql://postgres:<URL-ENCODED-DB-PASSWORD>@db.qysnyiufifgldieqnsly.supabase.co:5432/postgres`
   - `SEED_ADMIN_EMAIL=lucas.a2weber@gmail.com`
-  - `SEED_ADMIN_PASSWORD=REDACTED`
+  - `SEED_ADMIN_PASSWORD=<provided-separately>`
 
 - [ ] **Step 3: Verify `.env.local` is ignored** (from repo root)
 

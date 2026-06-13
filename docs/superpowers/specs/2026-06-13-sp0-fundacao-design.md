@@ -285,7 +285,7 @@ Meta do PRD: **≥60% em lógica de negócio**. Alvos de teste na SP0:
 | Service role vazar para o client | Usado **só** em route handlers server-side; nunca importado em componentes client; var de ambiente server-only. |
 | Custom Access Token Hook mal configurado → RLS sem `empresa_id` | Passo de setup explícito no plano + teste que falha se claim ausente. Fallback: `current_empresa_id()` retorna null → default-deny. |
 | Credenciais expostas no chat | `.env.local` no `.gitignore`; recomendado **rotacionar** as chaves Supabase no painel. |
-| Senha do admin fraca (`REDACTED`) | Senha **temporária** de desenvolvimento; só no `.env.local` (não versionada). Forçar/recomendar troca no primeiro acesso. |
+| Senha do admin fraca/temporária | Senha **temporária** de desenvolvimento; só no `.env.local` (não versionada). Forçar/recomendar troca no primeiro acesso. |
 | Paleta não-oficial | Tokens marcados como provisórios; validar manual da marca antes do go-live. |
 
 ---
