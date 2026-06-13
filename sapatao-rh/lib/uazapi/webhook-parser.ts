@@ -1,3 +1,8 @@
+// ⚠️ FIELD PATHS ASSUMED FROM THE ESPELHO — validate against a captured live UAZAPI v2
+// payload before relying in production: message.chat.{wa_name|wa_contactName|name} (contactName),
+// message.chatid|phone (phone), message.fromMe, message.messageType, message.text|conteudo|body,
+// message.wasSentByApi, message.mimetype|mime, top-level instance|instanceName|instance_id.
+
 import { extractMessageId, normalizeStatus } from "./extract";
 import { normalizePhone } from "./phone";
 

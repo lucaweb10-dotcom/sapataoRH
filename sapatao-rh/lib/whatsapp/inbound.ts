@@ -36,7 +36,7 @@ export type InboundContext = {
 
 export type InboundResult =
   | { ok: true; candidatoId: string; conversationId: string }
-  | { skipped: "echo" | "no-id" };
+  | { skipped: "outbound" | "no-id" };
 
 const DEDUP_ERROR_CODE = "23505";
 
@@ -45,9 +45,9 @@ export async function handleInboundMessage(
   ctx: InboundContext,
   db: DbLike,
 ): Promise<InboundResult> {
-  // 1. Skip outbound echoes sent by the API itself
-  if (event.direction === "outbound" && event.wasSentByApi) {
-    return { skipped: "echo" };
+  // 1. Skip all outbound messages (recruiter's own phone or API-sent echoes)
+  if (event.direction === "outbound") {
+    return { skipped: "outbound" };
   }
 
   // 2. Guard: require a provider message ID
@@ -88,7 +88,7 @@ export async function handleInboundMessage(
     empresa_id,
     conversation_id: conversationId,
     uazapi_msg_id: event.providerMessageId,
-    direction: "inbound",
+    direction: event.direction,
     tipo: event.messageType,
     conteudo: event.content,
   });

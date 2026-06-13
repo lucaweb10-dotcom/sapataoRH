@@ -82,7 +82,7 @@ describe("handleInboundMessage", () => {
       ctx,
       db,
     );
-    expect(result).toEqual({ skipped: "echo" });
+    expect(result).toEqual({ skipped: "outbound" });
     expect(db.upsertCandidato).not.toHaveBeenCalled();
   });
 
@@ -103,5 +103,61 @@ describe("handleInboundMessage", () => {
     const db = makeDb();
     await handleInboundMessage(msg({ content: "Olá, tenho interesse" }), ctx, db);
     expect(db.insertOptout).not.toHaveBeenCalled();
+  });
+
+  it("skips a message with no provider id", async () => {
+    const db = makeDb();
+    const result = await handleInboundMessage(msg({ providerMessageId: "" }), ctx, db);
+    expect(result).toEqual({ skipped: "no-id" });
+    expect(db.upsertCandidato).not.toHaveBeenCalled();
+  });
+
+  it("skips outbound-from-phone (fromMe=true, wasSentByApi=false)", async () => {
+    const db = makeDb();
+    const result = await handleInboundMessage(
+      msg({ direction: "outbound", wasSentByApi: false }),
+      ctx,
+      db,
+    );
+    expect(result).toEqual({ skipped: "outbound" });
+    expect(db.insertMessage).not.toHaveBeenCalled();
+  });
+
+  it('uses "Desconhecido" when contactName is null', async () => {
+    const db = makeDb();
+    await handleInboundMessage(msg({ contactName: null }), ctx, db);
+    expect(db.upsertCandidato).toHaveBeenCalledWith(
+      expect.objectContaining({ nome: "Desconhecido" }),
+    );
+  });
+
+  it("throws on a non-dedup insertMessage error", async () => {
+    const db = makeDb({
+      insertMessage: vi.fn(async () => ({
+        data: null,
+        error: { code: "23502", message: "not null violation" },
+      })),
+    });
+    await expect(handleInboundMessage(msg(), ctx, db)).rejects.toThrow();
+  });
+
+  it("throws when upsertCandidato errors", async () => {
+    const db = makeDb({
+      upsertCandidato: vi.fn(async () => ({
+        data: null,
+        error: { message: "db error" },
+      })),
+    });
+    await expect(handleInboundMessage(msg(), ctx, db)).rejects.toThrow("upsertCandidato failed");
+  });
+
+  it("throws when upsertConversation errors", async () => {
+    const db = makeDb({
+      upsertConversation: vi.fn(async () => ({
+        data: null,
+        error: { message: "db error" },
+      })),
+    });
+    await expect(handleInboundMessage(msg(), ctx, db)).rejects.toThrow("upsertConversation failed");
   });
 });

@@ -29,4 +29,22 @@ describe("normalizeStatus", () => {
     expect(normalizeStatus("Deleted")).toBe("deleted");
     expect(normalizeStatus("weird")).toBeNull();
   });
+  it("maps PENDING to sent", () => {
+    expect(normalizeStatus("PENDING")).toBe("sent");
+  });
+  it("maps canceled to failed", () => {
+    expect(normalizeStatus("canceled")).toBe("failed");
+  });
+  it("trims whitespace before mapping", () => {
+    expect(normalizeStatus("  Read  ")).toBe("read");
+  });
+  it("returns null for non-string inputs", () => {
+    expect(normalizeStatus(123)).toBeNull();
+    expect(normalizeStatus(null)).toBeNull();
+  });
+});
+describe("extractQr (additional)", () => {
+  it("reads base64 from nested instance object", () => {
+    expect(extractQr({ instance: { base64: "Q5" } })).toBe("Q5");
+  });
 });

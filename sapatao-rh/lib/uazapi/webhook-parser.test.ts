@@ -49,4 +49,41 @@ describe("parseUazapiEvent", () => {
     expect(parseUazapiEvent({ event: "messages", message: { fromMe: false } }).kind).toBe("ignore");
     expect(parseUazapiEvent({ event: "presence" }).kind).toBe("ignore");
   });
+
+  it("preserves senderName in the main inbound message", () => {
+    const e = parseUazapiEvent(inbound);
+    if (e.kind !== "message") throw new Error("kind");
+    expect(e.senderName).toBe("Recrutador X");
+  });
+
+  it("connection mapping: state variants", () => {
+    const conn = (extra: object) => parseUazapiEvent({ event: "connection", ...extra });
+    expect((conn({ state: "connecting" }) as { state: string }).state).toBe("connecting");
+    expect((conn({ state: "syncing" }) as { state: string }).state).toBe("connecting");
+    expect((conn({ state: "close" }) as { state: string }).state).toBe("disconnected");
+    expect((conn({ status: "open" }) as { state: string }).state).toBe("connected");
+    expect((conn({}) as { state: string }).state).toBe("disconnected");
+  });
+
+  it("status heuristic: known status → 'status', unknown → 'ignore'", () => {
+    expect(parseUazapiEvent({ messageid: "M9", status: "Read" }).kind).toBe("status");
+    expect(parseUazapiEvent({ event: "messages_update", messageid: "M9", status: "weird" }).kind).toBe("ignore");
+  });
+
+  it("contactName fallback chain: wa_contactName, name, null", () => {
+    const makeMsg = (chat: object) =>
+      parseUazapiEvent({ event: "messages", instance: "i", message: { messageid: "MX", fromMe: false, chat } });
+
+    const e1 = makeMsg({ wa_contactName: "Joana" });
+    if (e1.kind !== "message") throw new Error("kind");
+    expect(e1.contactName).toBe("Joana");
+
+    const e2 = makeMsg({ name: "X" });
+    if (e2.kind !== "message") throw new Error("kind");
+    expect(e2.contactName).toBe("X");
+
+    const e3 = makeMsg({});
+    if (e3.kind !== "message") throw new Error("kind");
+    expect(e3.contactName).toBeNull();
+  });
 });
