@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Message, MessageStatus } from "@/types/database";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
 import { Composer } from "./composer";
+import { dispatchSend } from "@/lib/chat/dispatch-send";
 
 interface Props {
   messages: Message[];
@@ -141,18 +142,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
     storeRetry(conversationId, item.clientMessageId);
     enqueueAndRun(
       { clientMessageId: item.clientMessageId, conversationId, texto: item.texto },
-      async (payload) => {
-        const res = await fetch("/api/whatsapp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId: payload.conversationId,
-            texto: payload.texto,
-            clientMessageId: payload.clientMessageId,
-          }),
-        });
-        return { ok: res.ok };
-      },
+      dispatchSend,
     );
   }
 

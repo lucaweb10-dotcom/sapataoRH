@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     },
     async sendText(token, number, text) {
       try {
-        const { providerId } = await uazapiSendText(token, number, text);
+        const { providerId } = await uazapiSendText(token, number.replace(/\D/g, ""), text);
         return { providerId };
       } catch (e) {
         return { providerId: null, error: e instanceof Error ? e.message : "send_error" };

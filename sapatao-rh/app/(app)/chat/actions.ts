@@ -20,5 +20,9 @@ export async function marcarConversaLida(conversationId: string): Promise<{ ok: 
     .update({ unread_count: 0 })
     .eq("id", conversationId)
     .gt("unread_count", 0);
+  // NOTE: phone-side read-sync via UAZAPI /chat/read (lib/uazapi/client.markChatRead)
+  // is intentionally deferred until the instance is actually connected — it is a no-op
+  // without UAZAPI credentials. SP1b ships the in-app unread badge; the phone sync rides
+  // with the live integration.
   return { ok: true };
 }
