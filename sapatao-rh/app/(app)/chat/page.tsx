@@ -3,7 +3,9 @@ import { getCurrentProfile } from "@/lib/auth/current-profile";
 import {
   listConversations,
   loadThread,
+  loadCandidato,
   getEmpresaId,
+  type ThreadResult,
 } from "@/lib/chat/queries";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { MessageThread } from "@/components/chat/message-thread";
@@ -29,34 +31,23 @@ export default async function ChatPage({
     listConversations(),
   ]);
 
-  // Load active thread and candidato details
-  let thread = { messages: [] as Awaited<ReturnType<typeof loadThread>>["messages"], hasMore: false };
-  let activeCandidato: Pick<Candidato, "nome" | "telefone" | "vaga_interesse" | "etapa" | "tags" | "notas_internas" | "score_ia" | "status"> | null = null;
-
-  if (activeConversationId) {
-    const activeConv = conversations.find((c) => c.id === activeConversationId);
-    if (activeConv) {
-      const [threadResult] = await Promise.all([loadThread(activeConversationId)]);
-      thread = threadResult;
-
-      // Build candidato info from the embedded data + defaults
-      if (activeConv.candidatos) {
-        activeCandidato = {
-          nome: activeConv.candidatos.nome,
-          telefone: activeConv.uazapi_chat_id ?? "",
-          vaga_interesse: null,
-          etapa: "recebimento",
-          tags: activeConv.candidatos.tags ?? [],
-          notas_internas: null,
-          score_ia: null,
-          status: "ativo",
-        };
-      }
-    }
-  }
-
-  // If no active conversation, pick the first one
+  // Default to the first conversation when none is explicitly selected.
   const displayedConvId = activeConversationId ?? conversations[0]?.id ?? null;
+  const displayedConv = displayedConvId
+    ? conversations.find((conv) => conv.id === displayedConvId)
+    : undefined;
+
+  // Load the displayed conversation's thread + the real candidato record.
+  let thread: ThreadResult = { messages: [], hasMore: false };
+  let activeCandidato: Candidato | null = null;
+  if (displayedConv) {
+    const [threadResult, candidato] = await Promise.all([
+      loadThread(displayedConv.id),
+      loadCandidato(displayedConv.candidato_id),
+    ]);
+    thread = threadResult;
+    activeCandidato = candidato;
+  }
 
   return (
     <div className="flex h-full overflow-hidden">

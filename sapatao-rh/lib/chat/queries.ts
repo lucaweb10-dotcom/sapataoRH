@@ -55,6 +55,21 @@ export async function loadThread(conversationId: string): Promise<ThreadResult> 
   return { messages, hasMore };
 }
 
+/** Returns the full candidato record (RLS-scoped) for the chat context panel. */
+export async function loadCandidato(candidatoId: string): Promise<Candidato | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("candidatos")
+    .select("*")
+    .eq("id", candidatoId)
+    .single<Candidato>();
+  if (error) {
+    console.error("[chat/queries] loadCandidato error:", error);
+    return null;
+  }
+  return data;
+}
+
 /** Returns the empresa_id of the currently logged-in user. */
 export async function getEmpresaId(): Promise<string | null> {
   const profile = await getCurrentProfile();
