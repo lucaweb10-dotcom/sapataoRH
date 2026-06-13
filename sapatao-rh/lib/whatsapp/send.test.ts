@@ -26,14 +26,14 @@ describe("enviarMensagem", () => {
     expect(deps.updateResult).toHaveBeenCalledWith("msg-1", { status: "sent", uazapi_msg_id: "PROV-1" });
   });
   it("idempotent: existing non-failed row is a no-op", async () => {
-    const deps = makeDeps({ findByClientId: vi.fn(async () => ({ id: "msg-x", status: "sent" })) });
+    const deps = makeDeps({ findByClientId: vi.fn(async () => ({ id: "msg-x", status: "sent" as const })) });
     const r = await enviarMensagem(input, deps);
     expect(r.ok).toBe(true);
     expect(deps.insertQueued).not.toHaveBeenCalled();
     expect(deps.sendText).not.toHaveBeenCalled();
   });
   it("reuses a failed row instead of inserting a duplicate", async () => {
-    const deps = makeDeps({ findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" })) });
+    const deps = makeDeps({ findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as const })) });
     const r = await enviarMensagem(input, deps);
     expect(r.ok).toBe(true);
     expect(deps.reuseFailed).toHaveBeenCalledWith("msg-f");
