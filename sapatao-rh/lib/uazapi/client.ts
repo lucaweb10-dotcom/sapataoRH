@@ -1,4 +1,4 @@
-import { extractQr } from "./extract";
+import { extractQr, extractMessageId } from "./extract";
 
 export class UazapiError extends Error {
   constructor(
@@ -107,5 +107,29 @@ export async function registerWebhook(token: string, url: string): Promise<void>
       events: ["messages", "messages_update", "connection"],
       excludeMessages: ["wasSentByApi"],
     }),
+  });
+}
+
+/** Send a text message. Returns the provider message id (tolerant extraction). */
+export async function sendText(
+  token: string,
+  number: string,
+  text: string,
+  replyId?: string,
+): Promise<{ providerId: string | null }> {
+  const body = await apiFetch("/send/text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token },
+    body: JSON.stringify(replyId ? { number, text, replyid: replyId } : { number, text }),
+  });
+  return { providerId: extractMessageId(body) };
+}
+
+/** Mark a chat as read (zeroes the badge on the connected phone). Best-effort. */
+export async function markChatRead(token: string, number: string): Promise<void> {
+  await apiFetch("/chat/read", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token },
+    body: JSON.stringify({ number, read: true }),
   });
 }
