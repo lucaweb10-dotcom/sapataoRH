@@ -62,7 +62,7 @@ export async function createUsuario(
 
   if (profileError) return { ok: false, error: "profile_failed" };
 
-  await admin.from("audit_log").insert({
+  const { error: auditError } = await admin.from("audit_log").insert({
     empresa_id: actor.empresa_id,
     ator_id: actor.ator_id,
     acao: "usuario.criado",
@@ -70,6 +70,9 @@ export async function createUsuario(
     entidade_id: data.user.id,
     payload: { role: input.role, email: input.email },
   });
+  if (auditError) {
+    console.error("audit_log insert failed:", auditError.message);
+  }
 
   return { ok: true, userId: data.user.id };
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email("E-mail inválido"),
+  email: z.email("E-mail inválido"),
   password: z.string().min(6, "Senha muito curta"),
 });
 
@@ -11,7 +11,7 @@ const uuidSchema = z.uuid();
 
 export const createUsuarioSchema = z.object({
   nome: z.string().min(2, "Informe o nome"),
-  email: z.string().email("E-mail inválido"),
+  email: z.email("E-mail inválido"),
   senha: z.string().min(6, "Mínimo de 6 caracteres"),
   role: roleSchema,
   unidades_acesso: z.array(uuidSchema).default([]),

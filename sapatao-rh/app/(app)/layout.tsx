@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
+import { canAccessPath } from "@/lib/auth/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
@@ -14,6 +16,12 @@ export default async function AppLayout({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (!profile.ativo) redirect("/login");
+
+  // Server-side route guard (defense in depth beyond nav filtering).
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (pathname && !canAccessPath(profile.role, pathname)) {
+    redirect("/dashboard");
+  }
 
   const supabase = await createClient();
   const { data: unidades } = await supabase
