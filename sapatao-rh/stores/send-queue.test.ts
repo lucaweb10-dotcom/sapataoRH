@@ -146,7 +146,7 @@ describe("useSendQueue worker", () => {
   it("parallel across conversations: two enqueues on different conversations both dispatch", async () => {
     const d1 = deferred();
     const d2 = deferred();
-    let calls: string[] = [];
+    const calls: string[] = [];
 
     const dispatch = vi.fn(async (payload: { clientMessageId: string; conversationId: string; texto: string }) => {
       calls.push(payload.conversationId);
