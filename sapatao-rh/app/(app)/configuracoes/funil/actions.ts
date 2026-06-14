@@ -78,7 +78,7 @@ export async function atualizarEtapa(etapaId: string, input: EtapaInputDTO): Pro
   return { ok: true };
 }
 
-/** Regrava ordem 1..N. Valida que os ids são exatamente as etapas do funil. */
+/** Regrava ordem 1..N atomicamente via RPC. Valida que os ids são exatamente as etapas do funil. */
 export async function reordenarEtapas(funilId: string, idsOrdenados: string[]): Promise<ActionResult> {
   const profile = await getCurrentProfile();
   if (!isAdmin(profile)) return { ok: false, error: "forbidden" };
@@ -89,23 +89,33 @@ export async function reordenarEtapas(funilId: string, idsOrdenados: string[]): 
   if (idsOrdenados.length !== validos.size || !idsOrdenados.every((id) => validos.has(id))) {
     return { ok: false, error: "invalido" };
   }
-  for (let i = 0; i < idsOrdenados.length; i++) {
-    const { error } = await supabase.from("funil_etapas").update({ ordem: i + 1 }).eq("id", idsOrdenados[i]);
-    if (error) {
-      console.error("[funil/config] reordenarEtapas:", error);
-      return { ok: false, error: "db" };
-    }
+  // RPC executa todos os UPDATEs numa única transação implícita (sem corrupção parcial).
+  // Cast necessário: supabase-js não infere RPCs customizados quando Functions=Record<string,never>.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc("reorder_funil_etapas", {
+    p_funil_id: funilId,
+    p_ids: idsOrdenados,
+  });
+  if (error) {
+    console.error("[funil/config] reordenarEtapas:", error);
+    return { ok: false, error: "db" };
   }
   revalidatePath("/configuracoes/funil");
   return { ok: true };
 }
 
-/** Exclui uma etapa — bloqueado se houver candidatos nela. */
+/** Exclui uma etapa — bloqueado se houver candidatos nela ou se for etapa do sistema (marcador). */
 export async function excluirEtapa(etapaId: string): Promise<ActionResult> {
   const profile = await getCurrentProfile();
   if (!isAdmin(profile)) return { ok: false, error: "forbidden" };
 
   const supabase = await createClient();
+
+  // Verifica marcador ANTES de contar candidatos para dar mensagem clara
+  const { data: etapa } = await supabase.from("funil_etapas").select("marcador").eq("id", etapaId).maybeSingle();
+  if (!etapa) return { ok: false, error: "forbidden" }; // RLS escondeu ou não existe
+  if (etapa.marcador) return { ok: false, error: "etapa_sistema" };
+
   const { count } = await supabase
     .from("candidatos")
     .select("id", { count: "exact", head: true })

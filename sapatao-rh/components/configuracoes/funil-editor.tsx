@@ -23,7 +23,16 @@ function EtapaRow({
   onExcluir: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: etapa.id });
+  const [confirming, setConfirming] = useState(false);
   const isIa = etapa.marcador === "ia_concluida";
+  const isSistema = !!etapa.marcador;
+  const deleteDisabled = count > 0 || isSistema;
+  const deleteTitle = count > 0
+    ? "Mova os candidatos antes de excluir"
+    : isSistema
+      ? "Etapa do sistema — não pode ser excluída"
+      : "Excluir etapa";
+
   return (
     <div
       ref={setNodeRef}
@@ -55,16 +64,33 @@ function EtapaRow({
         </div>
       </div>
       <EtapaFormDialog funilId={funilId} etapa={etapa} />
-      <Button
-        size="sm"
-        variant="ghost"
-        className="text-destructive"
-        disabled={count > 0}
-        title={count > 0 ? "Mova os candidatos antes de excluir" : "Excluir etapa"}
-        onClick={() => onExcluir(etapa.id)}
-      >
-        Excluir
-      </Button>
+      {confirming ? (
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-neutro-700">Confirmar?</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => { setConfirming(false); onExcluir(etapa.id); }}
+          >
+            Sim
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
+            Não
+          </Button>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-destructive"
+          disabled={deleteDisabled}
+          title={deleteTitle}
+          onClick={() => setConfirming(true)}
+        >
+          Excluir
+        </Button>
+      )}
     </div>
   );
 }
@@ -102,6 +128,7 @@ export function FunilEditor({
         if (!r.ok) {
           setEtapas(prev);
           toast.error("Não foi possível reordenar as etapas.");
+          router.refresh(); // re-sincroniza com o estado real do banco
         } else {
           router.refresh();
         }
@@ -109,6 +136,7 @@ export function FunilEditor({
       .catch(() => {
         setEtapas(prev);
         toast.error("Erro de rede ao reordenar.");
+        router.refresh();
       });
   };
 
@@ -122,9 +150,11 @@ export function FunilEditor({
           toast.error(
             r.error === "etapa_ocupada"
               ? "Esta etapa tem candidatos — mova-os antes de excluir."
-              : r.error === "forbidden"
-                ? "Sem permissão."
-                : "Não foi possível excluir a etapa.",
+              : r.error === "etapa_sistema"
+                ? "Esta etapa é usada pelo sistema e não pode ser excluída."
+                : r.error === "forbidden"
+                  ? "Sem permissão."
+                  : "Não foi possível excluir a etapa.",
           );
         }
       })
