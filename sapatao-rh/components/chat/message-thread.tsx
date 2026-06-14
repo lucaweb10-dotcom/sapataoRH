@@ -8,7 +8,7 @@ import type { MessageWithSignedUrl } from "@/lib/chat/queries";
 import { isCurriculoDoc } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
 import { Composer } from "./composer";
-import { dispatchSend } from "@/lib/chat/dispatch-send";
+import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
 
 interface Props {
   messages: MessageWithSignedUrl[];
@@ -319,13 +319,42 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
 
   const groups = groupByDate(displayed);
 
-  // Retry handler: re-dispatch with the same clientMessageId
+  // Retry handler: re-dispatch with the same clientMessageId (server dedups).
   function handleRetry(item: QueueItem) {
     storeRetry(conversationId, item.clientMessageId);
-    enqueueAndRun(
-      { clientMessageId: item.clientMessageId, conversationId, texto: item.texto },
-      dispatchSend,
-    );
+    if (item.media) {
+      const { objectUrl, mime, fileName } = item.media;
+      enqueueAndRun(
+        { clientMessageId: item.clientMessageId, conversationId, texto: item.texto, media: item.media },
+        async () => {
+          // base64 isn't kept on the queue item — re-read the blob from the local objectURL.
+          const buf = await (await fetch(objectUrl)).arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let b64 = "";
+          for (let i = 0; i < bytes.length; i += 8192) {
+            b64 += String.fromCharCode(...bytes.subarray(i, i + 8192));
+          }
+          return dispatchSendMedia({
+            clientMessageId: item.clientMessageId,
+            conversationId,
+            fileBase64: btoa(b64),
+            mime,
+            fileName,
+          });
+        },
+      );
+    } else {
+      enqueueAndRun(
+        { clientMessageId: item.clientMessageId, conversationId, texto: item.texto },
+        dispatchSend,
+      );
+    }
+  }
+
+  // Discard handler: revoke any local objectURL before removing the bubble.
+  function handleDiscard(item: QueueItem) {
+    if (item.media) URL.revokeObjectURL(item.media.objectUrl);
+    storePrune(conversationId, item.clientMessageId);
   }
 
   return (
@@ -437,7 +466,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => storePrune(conversationId, item.clientMessageId)}
+                                onClick={() => handleDiscard(item)}
                                 className="rounded px-2 py-0.5 text-xs font-medium text-neutro-700 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-neutro-400"
                               >
                                 Descartar

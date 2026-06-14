@@ -86,6 +86,7 @@ export async function POST(request: Request) {
           conteudo: row.caption ?? null,
           midia_url: row.midiaPath,
           midia_mime: mime,
+          metadata: fileName ? { fileName } : {},
           client_message_id: row.clientMessageId,
           sender_id: row.senderId,
           status: "queued",
