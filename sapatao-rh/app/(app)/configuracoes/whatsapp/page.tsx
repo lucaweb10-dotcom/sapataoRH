@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageContainer } from "@/components/shell/page-container";
+import { SettingsNav } from "@/components/configuracoes/settings-nav";
 import { WhatsappInstancePanel } from "./whatsapp-instance-panel";
 import type { WhatsappStatus } from "@/types/database";
 
@@ -37,6 +38,7 @@ export default async function WhatsappPage() {
 
   return (
     <PageContainer>
+      <SettingsNav />
       <div className="space-y-6 max-w-lg">
         <div>
           <h1 className="font-display text-2xl font-bold">WhatsApp</h1>

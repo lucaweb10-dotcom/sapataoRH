@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageContainer } from "@/components/shell/page-container";
+import { SettingsNav } from "@/components/configuracoes/settings-nav";
 
 export default async function AcessosPage() {
   const profile = await getCurrentProfile();
@@ -28,6 +29,7 @@ export default async function AcessosPage() {
 
   return (
     <PageContainer>
+      <SettingsNav />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
