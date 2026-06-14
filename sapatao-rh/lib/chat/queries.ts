@@ -1,14 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import type { Candidato, Conversation, Message } from "@/types/database";
+import { signedMediaUrls } from "./signed-url";
 
 // Conversations with embedded candidato data (PostgREST embed)
 export type ConversationWithCandidato = Conversation & {
   candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone"> | null;
 };
 
+export type MessageWithSignedUrl = Message & { midia_signed_url: string | null };
+
 export type ThreadResult = {
-  messages: Message[];
+  messages: MessageWithSignedUrl[];
   hasMore: boolean;
 };
 
@@ -50,7 +53,14 @@ export async function loadThread(conversationId: string): Promise<ThreadResult> 
   const rows = (data ?? []) as Message[];
   const hasMore = rows.length === 61;
   // We fetched newest-first; reverse to get chronological order for display.
-  const messages = (hasMore ? rows.slice(0, 60) : rows).reverse();
+  const ordered = (hasMore ? rows.slice(0, 60) : rows).reverse();
+  // Attach signed URLs for any stored media paths (TTL 1h, RLS-scoped).
+  const paths = ordered.map((m) => m.midia_url).filter((p): p is string => !!p);
+  const urls = await signedMediaUrls(paths);
+  const messages = ordered.map((m) => ({
+    ...m,
+    midia_signed_url: m.midia_url ? (urls.get(m.midia_url) ?? null) : null,
+  }));
 
   return { messages, hasMore };
 }

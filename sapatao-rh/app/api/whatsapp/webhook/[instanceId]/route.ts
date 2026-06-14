@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseUazapiEvent } from "@/lib/uazapi/webhook-parser";
 import { handleInboundMessage, type DbLike } from "@/lib/whatsapp/inbound";
 import { advanceStatus } from "@/lib/whatsapp/status";
+import { downloadMedia } from "@/lib/uazapi/client";
+import { downloadAndStoreInbound } from "@/lib/whatsapp/media";
 import type { MessageTipo } from "@/types/database";
+
+const MEDIA_TYPES = ["image", "audio", "video", "document", "ptt"];
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -108,7 +112,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
     const admin = createAdminClient();
     const { data: inst } = await admin
       .from("whatsapp_instances")
-      .select("id, empresa_id, webhook_secret")
+      .select("id, empresa_id, webhook_secret, uazapi_token")
       .eq("uazapi_instance_id", instanceId)
       .maybeSingle();
 
@@ -127,6 +131,40 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
         { empresa_id: inst.empresa_id, instance_id: inst.id },
         makeDb(admin),
       );
+      // Inbound media is NOT in the webhook payload — download it asynchronously
+      // (never blocks the 200). The helper is idempotent on redelivery.
+      if (MEDIA_TYPES.includes(event.messageType)) {
+        const empresaId = inst.empresa_id;
+        const token = inst.uazapi_token ?? "";
+        const providerMessageId = event.providerMessageId;
+        after(async () => {
+          await downloadAndStoreInbound(
+            { empresaId, providerMessageId, token },
+            {
+              getMessage: async (pid) => {
+                const { data } = await admin
+                  .from("messages")
+                  .select("id, midia_url")
+                  .eq("empresa_id", empresaId)
+                  .eq("uazapi_msg_id", pid)
+                  .maybeSingle();
+                return data ? { id: data.id, midia_url: data.midia_url } : null;
+              },
+              download: (tk, pid) => downloadMedia(tk, pid),
+              upload: async (path, bytes, mime) => {
+                const { error } = await admin.storage
+                  .from("whatsapp-media")
+                  .upload(path, bytes, { contentType: mime, upsert: true });
+                return { error: error ? { message: error.message } : null };
+              },
+              setMedia: async (id, fields) => {
+                const { error } = await admin.from("messages").update(fields).eq("id", id);
+                return { error: error ? { message: error.message } : null };
+              },
+            },
+          );
+        });
+      }
     } else if (event.kind === "connection") {
       await admin
         .from("whatsapp_instances")
