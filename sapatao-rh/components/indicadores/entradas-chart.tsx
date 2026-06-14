@@ -27,25 +27,25 @@ export function EntradasChart({ dados }: { dados: SemanaEntry[] }) {
       ) : (
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={dados} margin={{ top: 4, right: 0, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E7E2D6" vertical={false} />
             <XAxis
               dataKey="rotulo"
-              tick={{ fontSize: 11, fill: "#6B7280" }}
+              tick={{ fontSize: 11, fill: "#8A8F82" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               allowDecimals={false}
-              tick={{ fontSize: 11, fill: "#6B7280" }}
+              tick={{ fontSize: 11, fill: "#8A8F82" }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              contentStyle={{ borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12 }}
-              cursor={{ fill: "#F3F4F6" }}
+              contentStyle={{ borderRadius: 8, border: "1px solid #E7E2D6", fontSize: 12 }}
+              cursor={{ fill: "#F1EDE4" }}
               formatter={(value) => [value, "candidatos"]}
             />
-            <Bar dataKey="count" fill="#4A7C59" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="count" fill="#1C4A2E" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}

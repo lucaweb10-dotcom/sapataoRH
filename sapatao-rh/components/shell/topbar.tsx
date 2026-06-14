@@ -27,7 +27,7 @@ export function Topbar({
   }, [unidadeId, unidades, setUnidade]);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-neutro-200 bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutro-200 bg-card px-4 shadow-warm">
       <Select
         value={unidadeId ?? "todas"}
         onValueChange={(v: string | null) =>
@@ -48,10 +48,9 @@ export function Topbar({
       </Select>
 
       <div className="flex items-center gap-3">
-        <div className="text-right">
-          <div className="text-sm font-medium text-neutro-900">{profile.nome}</div>
-          <div className="text-xs text-neutro-700 capitalize">{profile.role}</div>
-        </div>
+        <span className="hidden text-sm font-medium text-neutro-900 sm:inline">
+          {profile.nome}
+        </span>
         <form action={signOut}>
           <Button type="submit" variant="ghost" size="sm">
             Sair

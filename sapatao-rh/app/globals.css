@@ -50,50 +50,73 @@
 }
 
 @theme {
-  /* Sapatão — PROVISÓRIO: validar com o manual da marca (PRD §11) */
-  --color-sapatao-verde: #1e4d2b;
-  --color-sapatao-verde-claro: #4a7c59;
+  /* Sapatão — Direção A "Editorial Sereno" (tema claro) */
+
+  /* Verde de marca (ação) — escala completa */
+  --color-brand-50: #eaf1ec;
+  --color-brand-100: #d6e4da;
+  --color-brand-200: #b7cfbf;
+  --color-brand-300: #8fb39c;
+  --color-brand-400: #5c8c6e;
+  --color-brand-500: #2d6a4f;
+  --color-brand-600: #235a41;
+  --color-brand-700: #1c4a2e;
+  --color-brand-800: #163d25;
+  --color-brand-900: #0f2b1a;
+
+  /* Neutros quentes (papel/taupe/texto) — escala completa */
+  --color-neutro-50: #faf8f3;
+  --color-neutro-100: #f1ede4;
+  --color-neutro-200: #e7e2d6;
+  --color-neutro-300: #d8d2c4;
+  --color-neutro-400: #b9b4a6;
+  --color-neutro-500: #8a8f82;
+  --color-neutro-600: #6a6f63;
+  --color-neutro-700: #5c6157;
+  --color-neutro-800: #3a3f36;
+  --color-neutro-900: #20251f;
+
+  /* Acentos de marca */
+  --color-sapatao-verde: #1c4a2e;
+  --color-sapatao-verde-claro: #2d6a4f;
+  --color-sapatao-terracota: #cf8a4a;
   --color-sapatao-laranja: #e85d2f;
   --color-sapatao-amarelo: #ffd500;
-  --color-neutro-900: #0f1419;
-  --color-neutro-700: #3d4852;
-  --color-neutro-200: #e8ecef;
-  --color-neutro-50: #fafbfc;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #1e4d2b;
-  --primary-foreground: #fafbfc;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #faf8f3;
+  --foreground: #20251f;
+  --card: #ffffff;
+  --card-foreground: #20251f;
+  --popover: #ffffff;
+  --popover-foreground: #20251f;
+  --primary: #1c4a2e;
+  --primary-foreground: #faf8f3;
+  --secondary: #f1ede4;
+  --secondary-foreground: #20251f;
+  --muted: #f1ede4;
+  --muted-foreground: #5c6157;
+  --accent: #f1ede4;
+  --accent-foreground: #20251f;
+  --destructive: #c0492b;
+  --border: #e7e2d6;
+  --input: #d8d2c4;
+  --ring: #1c4a2e;
+  --chart-1: #1c4a2e;
+  --chart-2: #2d6a4f;
+  --chart-3: #cf8a4a;
+  --chart-4: #e0a96d;
+  --chart-5: #8aa08f;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #f3f0e8;
+  --sidebar-foreground: #20251f;
+  --sidebar-primary: #1c4a2e;
+  --sidebar-primary-foreground: #faf8f3;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #1c4a2e;
+  --sidebar-border: #e7e2d6;
+  --sidebar-ring: #1c4a2e;
 }
 
 .dark {
@@ -139,5 +162,22 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Régua fina com gradiente de orgulho — toque sutil de identidade */
+  .pride-rule {
+    height: 3px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #cf8a4a 0%, #ffd500 35%, #3a9e63 70%, #1c4a2e 100%);
+    opacity: 0.85;
+  }
+  /* Sombra quente (tom esverdeado-marrom em vez de cinza-azulado) */
+  .shadow-warm {
+    box-shadow: 0 1px 2px rgba(28, 40, 30, 0.05), 0 1px 1px rgba(28, 40, 30, 0.04);
+  }
+  .shadow-warm-md {
+    box-shadow: 0 4px 12px rgba(28, 40, 30, 0.08);
   }
 }

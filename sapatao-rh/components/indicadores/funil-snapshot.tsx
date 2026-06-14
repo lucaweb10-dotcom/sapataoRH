@@ -43,9 +43,9 @@ export function FunilSnapshot({ etapas }: { etapas: EtapaSnapshot[] }) {
                 <td className="px-4 py-2.5 text-right">
                   {e.sla_dias != null ? (
                     <span>
-                      <span className="text-green-700">{e.sla_dentro}</span>
+                      <span className="text-brand-700">{e.sla_dentro}</span>
                       {" / "}
-                      <span className={e.sla_fora > 0 ? "font-medium text-red-600" : "text-neutro-700"}>
+                      <span className={e.sla_fora > 0 ? "font-medium text-destructive" : "text-neutro-700"}>
                         {e.sla_fora}
                       </span>
                     </span>

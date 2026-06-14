@@ -36,7 +36,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar role={profile.role} />
+      <Sidebar role={profile.role} profile={profile} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar profile={profile} unidades={visiveis} />
         <main className="flex-1 overflow-hidden bg-neutro-50">{children}</main>
