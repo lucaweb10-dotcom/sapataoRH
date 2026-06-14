@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -69,6 +69,12 @@ export function Board({
     setServerSnapshot(candidatos);
     setCards(candidatos);
   }
+  // Always points at the freshest committed server data, so an optimistic revert
+  // reconciles against the latest props even if a realtime refresh raced in.
+  const latestServer = useRef(candidatos);
+  useEffect(() => {
+    latestServer.current = candidatos;
+  }, [candidatos]);
 
   // Shared 60s tick so "tempo na etapa" labels stay fresh without per-card timers.
   const [now, setNow] = useState(() => Date.now());
@@ -77,7 +83,10 @@ export function Board({
     return () => clearInterval(t);
   }, []);
 
-  const [selected, setSelected] = useState<CandidatoFunil | null>(null);
+  // Hold only the id; derive the live candidato from `cards` so the open modal
+  // reflects realtime updates (etapa/status/notas) instead of a detached snapshot.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? (cards.find((c) => c.id === selectedId) ?? null) : null;
   const [pendingMove, setPendingMove] = useState<{ candidato: CandidatoFunil; etapa: FunilEtapa } | null>(
     null,
   );
@@ -86,7 +95,6 @@ export function Board({
   const grouped = useMemo(() => agruparPorEtapa(etapas, cards), [etapas, cards]);
 
   const performMove = (candidato: CandidatoFunil, etapa: FunilEtapa) => {
-    const prev = cards;
     setCards((cs) =>
       cs.map((c) =>
         c.id === candidato.id
@@ -94,15 +102,16 @@ export function Board({
           : c,
       ),
     );
+    const revert = () => setCards(latestServer.current);
     moverCandidatoAction({ candidatoId: candidato.id, paraEtapaId: etapa.id })
       .then((r) => {
         if (!r.ok) {
-          setCards(prev);
+          revert();
           toast.error("Não foi possível mover o candidato.");
         }
       })
       .catch(() => {
-        setCards(prev);
+        revert();
         toast.error("Erro de rede ao mover.");
       });
   };
@@ -125,7 +134,13 @@ export function Board({
     return (
       <Column key={etapa.id} etapa={etapa} count={list.length}>
         {list.map((c) => (
-          <CandidateCard key={c.id} candidato={c} now={now} canMove={canMove} onOpen={setSelected} />
+          <CandidateCard
+            key={c.id}
+            candidato={c}
+            now={now}
+            canMove={canMove}
+            onOpen={(cand) => setSelectedId(cand.id)}
+          />
         ))}
         {list.length === 0 && (
           <p className="px-1 py-6 text-center text-xs text-neutro-700">Vazio</p>
@@ -142,11 +157,11 @@ export function Board({
 
       <FunilRealtime empresaId={empresaId} />
       <CandidateModal
-        key={selected?.id ?? "none"}
+        key={selectedId ?? "none"}
         candidato={selected}
         etapas={etapas}
         canMove={canMove}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
       />
       {pendingMove && (
         <ConfirmMoveDialog

@@ -10,6 +10,11 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    // Re-apply the token whenever supabase-js rotates it (~hourly), so the
+    // realtime socket keeps passing RLS across reconnects (else it goes silent).
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) supabase.realtime.setAuth(session.access_token);
+    });
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
@@ -24,6 +29,7 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
         .subscribe();
     })();
     return () => {
+      authSub.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
   }, [empresaId, router]);

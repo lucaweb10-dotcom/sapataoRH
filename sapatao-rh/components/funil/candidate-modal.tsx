@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmMoveDialog } from "./confirm-move-dialog";
 import type { CandidatoFunil, HistoricoEntry } from "@/lib/funil/queries";
 import type { FunilEtapa } from "@/types/database";
 import { carregarHistorico, moverCandidatoAction, salvarNotas } from "@/app/(app)/funil/actions";
@@ -41,10 +42,11 @@ export function CandidateModal({
   canMove: boolean;
   onClose: () => void;
 }) {
-  // The board remounts this modal per candidato (key=candidato.id), so notas
+  // The board remounts this modal per candidato (key=selectedId), so notas
   // initializes cleanly from props and historico loads once per mount.
   const [notas, setNotas] = useState(candidato?.notas_internas ?? "");
   const [historico, setHistorico] = useState<HistoricoEntry[]>([]);
+  const [confirmEtapa, setConfirmEtapa] = useState<FunilEtapa | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -65,8 +67,7 @@ export function CandidateModal({
   const nomeEtapa = (id: string | null) => etapas.find((e) => e.id === id)?.nome ?? "—";
   const reprovado = etapas.find((e) => e.status_destino === "reprovado");
 
-  const onMover = (paraEtapaId: string) => {
-    if (paraEtapaId === candidato.etapa_id) return;
+  const doMove = (paraEtapaId: string) => {
     startTransition(async () => {
       const r = await moverCandidatoAction({ candidatoId: candidato.id, paraEtapaId });
       if (r.ok) {
@@ -78,6 +79,17 @@ export function CandidateModal({
     });
   };
 
+  // Same gate as the board: terminal/critical stages require explicit confirmation.
+  const onMover = (paraEtapaId: string) => {
+    if (paraEtapaId === candidato.etapa_id) return;
+    const etapa = etapas.find((e) => e.id === paraEtapaId);
+    if (etapa?.requires_confirm) {
+      setConfirmEtapa(etapa);
+      return;
+    }
+    doMove(paraEtapaId);
+  };
+
   const onSalvarNotas = () => {
     startTransition(async () => {
       const r = await salvarNotas({ candidatoId: candidato.id, notas });
@@ -87,6 +99,7 @@ export function CandidateModal({
   };
 
   return (
+    <>
     <Dialog open={!!candidato} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -219,5 +232,21 @@ export function CandidateModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {confirmEtapa && (
+      <ConfirmMoveDialog
+        open={!!confirmEtapa}
+        onOpenChange={(o) => {
+          if (!o) setConfirmEtapa(null);
+        }}
+        nome={candidato.nome}
+        etapaNome={confirmEtapa.nome}
+        onConfirm={() => {
+          doMove(confirmEtapa.id);
+          setConfirmEtapa(null);
+        }}
+      />
+    )}
+    </>
   );
 }

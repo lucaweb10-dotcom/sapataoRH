@@ -45,12 +45,13 @@ export async function moverCandidatoAction(input: {
       return (data as { empresa_id: string; is_terminal: boolean; status_destino: string | null } | null) ?? null;
     },
     updateEtapa: async (candidatoId, etapaId, statusTerminal) => {
+      // status é total: etapa terminal -> seu status_destino; não-terminal -> 'ativo'
+      // (assim, reverter um move terminal acidental volta o candidato para 'ativo').
       const patch: Partial<Candidato> = {
         etapa_id: etapaId,
         etapa_entrou_em: new Date().toISOString(),
+        status: (statusTerminal ?? "ativo") as Candidato["status"],
       };
-      // coalesce: only flip candidato.status when moving into a terminal stage
-      if (statusTerminal) patch.status = statusTerminal as Candidato["status"];
       const { error } = await supabase.from("candidatos").update(patch).eq("id", candidatoId);
       return { error };
     },
