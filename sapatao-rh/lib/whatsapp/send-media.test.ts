@@ -40,4 +40,90 @@ describe("enviarMidia", () => {
     expect(r.ok).toBe(false);
     expect(deps.updateResult).toHaveBeenCalledWith("msg-1", { status: "failed", error: "boom" });
   });
+
+  // ── reuseFailed concurrency scenarios ────────────────────────────────────────
+
+  it("reuseFailed claimed → send proceeds, marks sent", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as MessageStatus })),
+      reuseFailed: vi.fn(async () => ({ claimed: true, error: null })),
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r.ok).toBe(true);
+    expect(deps.reuseFailed).toHaveBeenCalledWith("msg-f");
+    expect(deps.insertQueued).not.toHaveBeenCalled();
+    expect(deps.sendMedia).toHaveBeenCalled();
+  });
+
+  it("reuseFailed not claimed (concurrent) → ok no-op, sendMedia not called", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as MessageStatus })),
+      reuseFailed: vi.fn(async () => ({ claimed: false, error: null })),
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: true, messageId: "msg-f" });
+    expect(deps.sendMedia).not.toHaveBeenCalled();
+  });
+
+  it("reuseFailed error → reuse_failed, sendMedia not called", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as MessageStatus })),
+      reuseFailed: vi.fn(async () => ({ claimed: false, error: { message: "boom" } })),
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: false, error: "reuse_failed", messageId: "msg-f" });
+    expect(deps.sendMedia).not.toHaveBeenCalled();
+  });
+
+  // ── insert-race scenarios ─────────────────────────────────────────────────────
+
+  it("race-win: 23505 + winner found → ok with winner id, sendMedia not called", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23505" } })),
+      findByClientId: vi
+        .fn()
+        .mockResolvedValueOnce(null) // first call (idempotency check) → no existing row
+        .mockResolvedValueOnce({ id: "msg-win", status: "queued" as MessageStatus }), // second call (race re-select)
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: true, messageId: "msg-win" });
+    expect(deps.sendMedia).not.toHaveBeenCalled();
+  });
+
+  it("race-no-winner: 23505 but no winner found → insert_failed", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23505" } })),
+      findByClientId: vi.fn(async () => null), // both calls return null
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: false, error: "insert_failed" });
+  });
+
+  it("non-23505 insert error → insert_failed", async () => {
+    const deps = makeDeps({
+      insertQueued: vi.fn(async () => ({ id: null, error: { code: "23502", message: "not null" } })),
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: false, error: "insert_failed" });
+  });
+
+  // ── context_error ─────────────────────────────────────────────────────────────
+
+  it("context_error: loadContext returns null → context_error, sendMedia not called", async () => {
+    const deps = makeDeps({ loadContext: vi.fn(async () => null) });
+    const r = await enviarMidia(input, deps);
+    expect(r).toEqual({ ok: false, error: "context_error" });
+    expect(deps.sendMedia).not.toHaveBeenCalled();
+  });
+
+  // ── updateResult error still returns ok (message sent, webhook reconciles) ────
+
+  it("updateResult error on sent path still returns ok", async () => {
+    const deps = makeDeps({
+      updateResult: vi.fn(async () => ({ error: { message: "x" } })),
+      sendMedia: vi.fn(async () => ({ providerId: "PROV-2" })),
+    });
+    const r = await enviarMidia(input, deps);
+    expect(r.ok).toBe(true);
+  });
 });

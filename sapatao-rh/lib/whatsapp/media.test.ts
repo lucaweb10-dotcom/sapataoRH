@@ -31,4 +31,11 @@ describe("downloadAndStoreInbound", () => {
     expect(r).toEqual({ stored: false, reason: "empty" });
     expect(deps.upload).not.toHaveBeenCalled();
   });
+  it("setMedia error → stored:false, reason:set_error (download + upload still called)", async () => {
+    const deps = makeDeps({ setMedia: vi.fn(async () => ({ error: { message: "db" } })) });
+    const r = await downloadAndStoreInbound(input, deps);
+    expect(r).toEqual({ stored: false, reason: "set_error" });
+    expect(deps.download).toHaveBeenCalled();
+    expect(deps.upload).toHaveBeenCalled();
+  });
 });

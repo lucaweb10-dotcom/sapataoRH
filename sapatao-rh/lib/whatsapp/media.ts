@@ -25,6 +25,7 @@ export async function downloadAndStoreInbound(
   const up = await deps.upload(path, bytes, finalMime);
   if (up.error) return { stored: false, reason: "upload_error" };
 
-  await deps.setMedia(msg.id, { midia_url: path, midia_mime: finalMime });
+  const set = await deps.setMedia(msg.id, { midia_url: path, midia_mime: finalMime });
+  if (set.error) { console.error(set.error.message); return { stored: false, reason: "set_error" }; }
   return { stored: true };
 }

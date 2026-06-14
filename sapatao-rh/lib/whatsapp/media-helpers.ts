@@ -12,6 +12,7 @@ function clean(mime: string | null): string {
 export function mimeToExt(mime: string | null): string {
   return EXT[clean(mime)] ?? "bin";
 }
+// Note: outbound audio is intentionally classified as 'audio' (file) in SP1c — 'ptt' (voice note) is out of scope.
 export function tipoFromMime(mime: string | null): "image" | "audio" | "video" | "document" {
   const m = clean(mime);
   if (m.startsWith("image/")) return "image";
