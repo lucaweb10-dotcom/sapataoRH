@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Message, MessageStatus } from "@/types/database";
+import type { MessageStatus } from "@/types/database";
+import type { MessageWithSignedUrl } from "@/lib/chat/queries";
+import { isCurriculoDoc } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
 import { Composer } from "./composer";
 import { dispatchSend } from "@/lib/chat/dispatch-send";
 
 interface Props {
-  messages: Message[];
+  messages: MessageWithSignedUrl[];
   hasMore: boolean;
   conversationId: string;
 }
@@ -70,10 +73,177 @@ function StatusIcon({ status }: { status: MessageStatus | QueueItemStatus }) {
   return null;
 }
 
+// ── Media placeholder ─────────────────────────────────────────────────────────
+
+function MediaPlaceholder() {
+  return (
+    <p className="italic text-xs opacity-60">carregando mídia...</p>
+  );
+}
+
+// ── Document icon (SVG) ───────────────────────────────────────────────────────
+
+function DocumentIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={cn("size-5", className)}
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z"
+        clipRule="evenodd"
+      />
+      <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" />
+    </svg>
+  );
+}
+
+// ── Analisar Currículo button ─────────────────────────────────────────────────
+
+function AnalisarCurriculoButton({ messageId, isOutbound }: { messageId: string; isOutbound: boolean }) {
+  async function handleClick() {
+    try {
+      await fetch("/api/cv/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId }),
+      });
+    } catch {
+      // network error is fine — the server is a stub
+    }
+    toast("Análise de IA chega na SP3");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        "mt-1 rounded px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-1",
+        isOutbound
+          ? "bg-white/20 text-white hover:bg-white/30 focus-visible:ring-white/50"
+          : "bg-sapatao-verde/10 text-sapatao-verde hover:bg-sapatao-verde/20 focus-visible:ring-sapatao-verde",
+      )}
+    >
+      Analisar Currículo
+    </button>
+  );
+}
+
+// ── Media bubble content (server message) ────────────────────────────────────
+
+function ServerMediaContent({
+  msg,
+  isOutbound,
+}: {
+  msg: MessageWithSignedUrl;
+  isOutbound: boolean;
+}) {
+  const url = msg.midia_signed_url;
+
+  if (msg.tipo === "image") {
+    return (
+      <div>
+        {url ? (
+          <img
+            src={url}
+            alt={msg.conteudo ?? "imagem"}
+            className="max-w-[240px] rounded-lg"
+          />
+        ) : (
+          <MediaPlaceholder />
+        )}
+        {msg.conteudo && (
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.conteudo}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (msg.tipo === "audio" || msg.tipo === "ptt") {
+    return url ? (
+      // eslint-disable-next-line jsx-a11y/media-has-caption
+      <audio controls src={url} className="max-w-[240px]" />
+    ) : (
+      <MediaPlaceholder />
+    );
+  }
+
+  if (msg.tipo === "document") {
+    const fileName =
+      typeof msg.metadata?.fileName === "string" ? msg.metadata.fileName : "Documento";
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />
+          <span className="max-w-[180px] truncate text-sm font-medium">{fileName}</span>
+        </div>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              "text-xs underline underline-offset-2",
+              isOutbound ? "text-white/80 hover:text-white" : "text-sapatao-verde hover:text-sapatao-verde/80",
+            )}
+          >
+            Baixar
+          </a>
+        ) : (
+          <MediaPlaceholder />
+        )}
+        {isCurriculoDoc(msg.midia_mime) && (
+          <AnalisarCurriculoButton messageId={msg.id} isOutbound={isOutbound} />
+        )}
+      </div>
+    );
+  }
+
+  // text / system / video / sticker / unknown — fallback
+  return <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>;
+}
+
+// ── Optimistic media bubble content (queue item) ──────────────────────────────
+
+function QueueMediaContent({ item, isOutbound }: { item: QueueItem; isOutbound: boolean }) {
+  if (!item.media) {
+    return <p className="whitespace-pre-wrap break-words">{item.texto}</p>;
+  }
+
+  const { objectUrl, mime, fileName } = item.media;
+
+  if (mime.startsWith("image/")) {
+    return (
+      <div>
+        <img
+          src={objectUrl}
+          alt={fileName}
+          className="max-w-[240px] rounded-lg opacity-80"
+        />
+        {item.texto && (
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{item.texto}</p>
+        )}
+      </div>
+    );
+  }
+
+  // document / audio / etc — show file name card
+  return (
+    <div className="flex items-center gap-2">
+      <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />
+      <span className="max-w-[180px] truncate text-sm font-medium">{fileName}</span>
+    </div>
+  );
+}
+
 // ── Displayed item types ───────────────────────────────────────────────────────
 
 type DisplayedMessage =
-  | { kind: "server"; msg: Message }
+  | { kind: "server"; msg: MessageWithSignedUrl }
   | { kind: "queue"; item: QueueItem };
 
 function groupByDate(items: DisplayedMessage[]): { date: string; items: DisplayedMessage[] }[] {
@@ -109,13 +279,25 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
   // Queue items for this conversation
   const queueItems: QueueItem[] = useMemo(() => queue[conversationId] ?? [], [queue, conversationId]);
 
-  // Prune queue items once their server row arrives
+  // Prune queue items once their server row arrives.
+  // For media items, revoke the objectURL to prevent memory leaks.
   useEffect(() => {
     if (queueItems.length === 0) return;
     const serverIds = new Set(messages.map((m) => m.client_message_id).filter(Boolean));
     for (const item of queueItems) {
       if (serverIds.has(item.clientMessageId)) {
-        storePrune(conversationId, item.clientMessageId);
+        // Find the matching server row — only prune once it has a signed URL
+        // (so the image doesn't flash blank during the transition)
+        const serverRow = messages.find(
+          (m) => m.client_message_id === item.clientMessageId,
+        );
+        const serverHasMedia = !item.media || serverRow?.midia_signed_url;
+        if (serverHasMedia) {
+          if (item.media?.objectUrl) {
+            URL.revokeObjectURL(item.media.objectUrl);
+          }
+          storePrune(conversationId, item.clientMessageId);
+        }
       }
     }
   }, [messages, queueItems, conversationId, storePrune]);
@@ -194,26 +376,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
                                 : "rounded-tl-sm bg-white text-neutro-900 border border-neutro-200",
                             )}
                           >
-                            {msg.tipo === "text" || msg.tipo === "system" ? (
-                              <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>
-                            ) : (
-                              <p className="italic opacity-75">
-                                [{msg.tipo}
-                                {msg.midia_url ? (
-                                  <>
-                                    {" "}— {" "}
-                                    <a
-                                      href={msg.midia_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="underline"
-                                    >
-                                      ver
-                                    </a>
-                                  </>
-                                ) : null}]
-                              </p>
-                            )}
+                            <ServerMediaContent msg={msg} isOutbound={isOutbound} />
                             <p
                               className={cn(
                                 "mt-1 text-right text-[10px]",
@@ -245,7 +408,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
                                 : "bg-sapatao-verde text-white opacity-90",
                             )}
                           >
-                            <p className="whitespace-pre-wrap break-words">{item.texto}</p>
+                            <QueueMediaContent item={item} isOutbound={!isFailed} />
                             <p
                               className={cn(
                                 "mt-1 text-right text-[10px]",
