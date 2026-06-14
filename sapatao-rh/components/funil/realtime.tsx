@@ -10,6 +10,11 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    // The browser client is a singleton and channel(topic) reuses an existing
+    // channel by topic. Under Strict Mode (mount->cleanup->mount) the cleanup
+    // runs before this async IIFE assigns `channel`, so guard with `cancelled`
+    // to ensure only the live mount ever creates/subscribes a channel.
+    let cancelled = false;
     // Re-apply the token whenever supabase-js rotates it (~hourly), so the
     // realtime socket keeps passing RLS across reconnects (else it goes silent).
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -17,8 +22,9 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
     });
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
+      if (cancelled || !data.session) return;
       await supabase.realtime.setAuth(data.session.access_token); // CRITICAL: else RLS filters all events
+      if (cancelled) return;
       channel = supabase
         .channel("funil")
         .on(
@@ -29,6 +35,7 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
         .subscribe();
     })();
     return () => {
+      cancelled = true;
       authSub.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
