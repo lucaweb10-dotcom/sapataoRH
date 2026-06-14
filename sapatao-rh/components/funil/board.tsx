@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { agruparPorEtapa } from "@/lib/funil/agrupar";
+import { contrastText } from "@/lib/funil/contrast";
 import { moverCandidatoAction } from "@/app/(app)/funil/actions";
 import { CandidateCard } from "./candidate-card";
 import { CandidateModal } from "./candidate-modal";
@@ -28,12 +29,19 @@ function Column({
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: etapa.id });
+  const fg = contrastText(etapa.cor);
+  const badgeBg = fg === "#ffffff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.12)";
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutro-200 bg-neutro-50">
-      <div className="flex items-center gap-2 border-b border-neutro-200 px-3 py-2">
-        <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: etapa.cor }} />
-        <span className="truncate text-sm font-semibold text-neutro-900">{etapa.nome}</span>
-        <span className="ml-auto shrink-0 rounded-full bg-neutro-200 px-1.5 text-xs text-neutro-700">
+    <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-neutro-200 bg-neutro-50 shadow-warm">
+      <div
+        className="flex items-center gap-2 px-3.5 py-2.5"
+        style={{ backgroundColor: etapa.cor, color: fg }}
+      >
+        <span className="truncate text-sm font-bold">{etapa.nome}</span>
+        <span
+          className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
+          style={{ backgroundColor: badgeBg }}
+        >
           {count}
         </span>
       </div>
@@ -137,13 +145,14 @@ export function Board({
           <CandidateCard
             key={c.id}
             candidato={c}
+            cor={etapa.cor}
             now={now}
             canMove={canMove}
             onOpen={(cand) => setSelectedId(cand.id)}
           />
         ))}
         {list.length === 0 && (
-          <p className="px-1 py-6 text-center text-xs text-neutro-700">Vazio</p>
+          <p className="px-1 py-8 text-center text-xs text-neutro-500">Vazio</p>
         )}
       </Column>
     );
