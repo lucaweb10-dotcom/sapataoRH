@@ -133,3 +133,44 @@ export async function markChatRead(token: string, number: string): Promise<void>
     body: JSON.stringify({ number, read: true }),
   });
 }
+
+/** Download received media (the v2 webhook carries only the id). Returns base64 + mime. */
+export async function downloadMedia(
+  token: string,
+  providerMessageId: string,
+): Promise<{ base64: string | null; mime: string | null }> {
+  const body = (await apiFetch("/message/download", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token },
+    body: JSON.stringify({ id: providerMessageId, return_base64: true, return_link: false }),
+  })) as Record<string, unknown>;
+  const base64 =
+    (body["base64"] as string | undefined) ??
+    (body["data"] as string | undefined) ??
+    (body["file"] as string | undefined) ??
+    null;
+  const mime =
+    (body["mimetype"] as string | undefined) ?? (body["mime"] as string | undefined) ?? null;
+  return { base64, mime };
+}
+
+/** Send media. Caption goes in `text` (NOT `caption`); docName only for documents. */
+export async function sendMedia(
+  token: string,
+  number: string,
+  args: { type: "image" | "video" | "audio" | "ptt" | "document"; fileBase64: string; mimetype: string; docName?: string; caption?: string },
+): Promise<{ providerId: string | null }> {
+  const body = await apiFetch("/send/media", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token },
+    body: JSON.stringify({
+      number,
+      type: args.type,
+      file: args.fileBase64,
+      mimetype: args.mimetype,
+      ...(args.docName ? { docName: args.docName } : {}),
+      ...(args.caption ? { text: args.caption } : {}),
+    }),
+  });
+  return { providerId: extractMessageId(body) };
+}
