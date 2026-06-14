@@ -17,10 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmMoveDialog } from "./confirm-move-dialog";
+import { AgendarDialog } from "./agendar-dialog";
 import { ParecerView } from "@/components/cv/parecer-view";
 import type { CandidatoFunil, HistoricoEntry } from "@/lib/funil/queries";
-import type { FunilEtapa } from "@/types/database";
-import { carregarHistorico, moverCandidatoAction, salvarNotas } from "@/app/(app)/funil/actions";
+import type { FunilEtapa, Entrevista } from "@/types/database";
+import { carregarHistorico, carregarEntrevista, moverCandidatoAction, salvarNotas } from "@/app/(app)/funil/actions";
 
 function Info({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (value === null || value === undefined || value === "") return null;
@@ -47,15 +48,23 @@ export function CandidateModal({
   // initializes cleanly from props and historico loads once per mount.
   const [notas, setNotas] = useState(candidato?.notas_internas ?? "");
   const [historico, setHistorico] = useState<HistoricoEntry[]>([]);
+  const [entrevista, setEntrevista] = useState<Entrevista | null>(null);
+  const [agendarOpen, setAgendarOpen] = useState(false);
   const [confirmEtapa, setConfirmEtapa] = useState<FunilEtapa | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!candidato) return;
     let alive = true;
-    carregarHistorico(candidato.id)
-      .then((h) => {
-        if (alive) setHistorico(h);
+    Promise.all([
+      carregarHistorico(candidato.id),
+      carregarEntrevista(candidato.id),
+    ])
+      .then(([h, e]) => {
+        if (alive) {
+          setHistorico(h);
+          setEntrevista(e);
+        }
       })
       .catch(() => {});
     return () => {
@@ -158,6 +167,26 @@ export function CandidateModal({
             )}
           </div>
 
+          {/* Entrevista agendada */}
+          {entrevista && (
+            <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm">
+              <p className="mb-1 text-xs font-medium text-brand-700">Entrevista agendada</p>
+              <p className="font-medium text-neutro-900">
+                {new Date(entrevista.data_hora).toLocaleString("pt-BR", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                })}
+              </p>
+              <p className="text-neutro-700 capitalize">{entrevista.formato}</p>
+              {entrevista.local_ou_link && (
+                <p className="mt-0.5 truncate text-neutro-700">{entrevista.local_ou_link}</p>
+              )}
+              {entrevista.observacoes && (
+                <p className="mt-1 text-neutro-700">{entrevista.observacoes}</p>
+              )}
+            </div>
+          )}
+
           {/* Histórico */}
           <div>
             <p className="mb-1.5 text-xs font-medium text-neutro-700">Histórico de etapas</p>
@@ -223,12 +252,22 @@ export function CandidateModal({
             </Button>
           )}
 
-          <Button size="sm" variant="ghost" disabled title="Disponível no SP5">
-            Agendar entrevista
-          </Button>
+          {canMove && (
+            <Button size="sm" variant="outline" onClick={() => setAgendarOpen(true)} disabled={pending}>
+              {entrevista ? "Reagendar" : "Agendar entrevista"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
+
+    <AgendarDialog
+      open={agendarOpen}
+      onOpenChange={setAgendarOpen}
+      candidatoId={candidato.id}
+      candidatoNome={candidato.nome}
+      onSucesso={(e) => setEntrevista(e)}
+    />
 
     {confirmEtapa && (
       <ConfirmMoveDialog

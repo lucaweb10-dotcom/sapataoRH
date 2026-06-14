@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { moverCandidato, type MoverDeps, type MoverResult } from "@/lib/funil/mover";
 import { getHistorico, type HistoricoEntry } from "@/lib/funil/queries";
 import { moverSchema, notasSchema } from "@/lib/validations/funil";
-import type { Candidato } from "@/types/database";
+import { entrevistaSchema, type EntrevistaInput } from "@/lib/validations/entrevista";
+import type { Candidato, Entrevista } from "@/types/database";
 
 function canWrite(role: string, platformAdmin: boolean): boolean {
   return platformAdmin || role === "admin" || role === "rh";
@@ -107,4 +108,59 @@ export async function carregarHistorico(candidatoId: string): Promise<HistoricoE
   const profile = await getCurrentProfile();
   if (!profile) return [];
   return getHistorico(candidatoId);
+}
+
+/** Agenda uma entrevista para o candidato (insere sempre; mais recente = vigente). */
+export async function agendarEntrevista(
+  candidatoId: string,
+  input: EntrevistaInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const profile = await getCurrentProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "rh" && !profile.platform_admin)) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  const parsed = entrevistaSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalido" };
+
+  const supabase = await createClient();
+
+  // Valida que o candidato pertence à empresa (RLS cobre, mas verificamos explicitamente)
+  const { data: cand } = await supabase
+    .from("candidatos")
+    .select("empresa_id")
+    .eq("id", candidatoId)
+    .maybeSingle();
+  if (!cand) return { ok: false, error: "forbidden" };
+
+  const { error } = await supabase.from("entrevistas").insert({
+    empresa_id: cand.empresa_id,
+    candidato_id: candidatoId,
+    data_hora: new Date(parsed.data.data_hora).toISOString(),
+    formato: parsed.data.formato,
+    local_ou_link: parsed.data.local_ou_link ?? null,
+    observacoes: parsed.data.observacoes ?? null,
+    criado_por: profile.id,
+  });
+
+  if (error) {
+    console.error("[funil/actions] agendarEntrevista:", error);
+    return { ok: false, error: "db" };
+  }
+  return { ok: true };
+}
+
+/** Carrega a entrevista mais recente do candidato (a vigente). */
+export async function carregarEntrevista(candidatoId: string): Promise<Entrevista | null> {
+  const profile = await getCurrentProfile();
+  if (!profile) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("entrevistas")
+    .select("*")
+    .eq("candidato_id", candidatoId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as Entrevista | null;
 }

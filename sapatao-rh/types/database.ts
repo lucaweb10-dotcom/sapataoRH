@@ -195,6 +195,20 @@ export type CvAnalise = {
   created_at: string;
 };
 
+export type EntrevistaFormato = "presencial" | "online";
+
+export type Entrevista = {
+  id: string;
+  empresa_id: string;
+  candidato_id: string;
+  data_hora: string;
+  formato: EntrevistaFormato;
+  local_ou_link: string | null;
+  observacoes: string | null;
+  criado_por: string | null;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -290,6 +304,12 @@ export interface Database {
         Row: CvAnalise;
         Insert: Partial<CvAnalise> & { empresa_id: string; candidato_id: string; status: string };
         Update: Partial<CvAnalise>;
+        Relationships: [];
+      };
+      entrevistas: {
+        Row: Entrevista;
+        Insert: Partial<Entrevista> & { empresa_id: string; candidato_id: string; data_hora: string; formato: EntrevistaFormato };
+        Update: Partial<Entrevista>;
         Relationships: [];
       };
     };
