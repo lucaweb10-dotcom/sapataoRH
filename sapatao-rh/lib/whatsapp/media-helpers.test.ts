@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mimeToExt, tipoFromMime, isCurriculoDoc } from "./media-helpers";
+import { mimeToExt, tipoFromMime, isCurriculoDoc, isAnalisavelCv } from "./media-helpers";
 
 describe("mimeToExt", () => {
   it("maps known mimes, falls back to bin", () => {
@@ -26,5 +26,15 @@ describe("isCurriculoDoc", () => {
     expect(isCurriculoDoc("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe(true);
     expect(isCurriculoDoc("image/jpeg")).toBe(false);
     expect(isCurriculoDoc(null)).toBe(false);
+  });
+});
+
+describe("isAnalisavelCv", () => {
+  it("aceita só PDF e DOCX (exclui .doc legado e imagens)", () => {
+    expect(isAnalisavelCv("application/pdf")).toBe(true);
+    expect(isAnalisavelCv("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe(true);
+    expect(isAnalisavelCv("application/msword")).toBe(false); // .doc não é extraível
+    expect(isAnalisavelCv("image/png")).toBe(false);
+    expect(isAnalisavelCv(null)).toBe(false);
   });
 });

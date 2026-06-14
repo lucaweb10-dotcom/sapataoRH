@@ -88,6 +88,16 @@ describe("analisarCurriculo", () => {
     expect(deps.registrarAnalise).toHaveBeenCalledWith(expect.objectContaining({ status: "persist_falhou" }));
   });
 
+  it("persist que LANÇA -> persist_falhou (mapeado, não escapa)", async () => {
+    const deps = makeDeps({
+      persist: vi.fn(async () => {
+        throw new Error("conexão caiu");
+      }),
+    });
+    expect(await analisarCurriculo(input, deps)).toEqual({ ok: false, error: "persist_falhou" });
+    expect(deps.moverParaAnaliseConcluida).not.toHaveBeenCalled();
+  });
+
   it("erro ao mover é best-effort: não derruba o resultado ok", async () => {
     const deps = makeDeps({
       moverParaAnaliseConcluida: vi.fn(async () => {

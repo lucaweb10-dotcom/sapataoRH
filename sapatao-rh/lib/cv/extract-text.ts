@@ -14,8 +14,13 @@ async function defaultPdf(buffer: Buffer): Promise<string> {
   // pdf-parse v2: instanciar PDFParse({ data }) e chamar getText() (.text concatenado).
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  const result = await parser.getText();
-  return result.text;
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    // libera o documento/worker do pdfjs (evita leak em runtime Node de vida longa)
+    await parser.destroy();
+  }
 }
 
 async function defaultDocx(buffer: Buffer): Promise<string> {

@@ -86,7 +86,12 @@ export async function analisarCurriculo(input: AnaliseInput, deps: AnaliseDeps):
     return { ok: false, error: "parecer_invalido" };
   }
 
-  const p = await deps.persist(input.candidatoId, parecer.score, parecer);
+  let p: { error: unknown | null };
+  try {
+    p = await deps.persist(input.candidatoId, parecer.score, parecer);
+  } catch {
+    p = { error: new Error("persist rejeitou") };
+  }
   if (p.error) {
     await safeLog(deps, { status: "persist_falhou", score: parecer.score, parecer, tokensEst: llmOut.tokensEst });
     return { ok: false, error: "persist_falhou" };

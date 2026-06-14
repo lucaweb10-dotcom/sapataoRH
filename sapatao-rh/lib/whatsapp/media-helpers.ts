@@ -28,3 +28,13 @@ const CV_MIMES = new Set([
 export function isCurriculoDoc(mime: string | null): boolean {
   return CV_MIMES.has(clean(mime));
 }
+
+// Formatos que a análise de IA realmente consegue extrair (PDF + DOCX). Mais estrito
+// que isCurriculoDoc (que inclui .doc legado) — usado para oferecer/admitir a análise.
+const CV_ANALISAVEL_MIMES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+export function isAnalisavelCv(mime: string | null): boolean {
+  return CV_ANALISAVEL_MIMES.has(clean(mime));
+}

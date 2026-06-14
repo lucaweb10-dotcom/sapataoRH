@@ -5,8 +5,7 @@ import { analisarCurriculo, type AnaliseDeps, type AnaliseErro } from "@/lib/cv/
 import { extractCvText } from "@/lib/cv/extract-text";
 import { getCriterios } from "@/lib/cv/criterios";
 import { getLlmProvider } from "@/lib/llm/factory";
-import { getFunilComEtapas } from "@/lib/funil/queries";
-import { isCurriculoDoc } from "@/lib/whatsapp/media-helpers";
+import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
 import { analyzeSchema } from "@/lib/validations/cv";
 import type { Parecer } from "@/lib/cv/parecer";
 
@@ -43,9 +42,9 @@ export async function POST(req: Request) {
     .select("midia_url, midia_mime, conversation_id")
     .eq("id", parsed.data.messageId)
     .maybeSingle();
-  if (!msg || !msg.midia_url || !isCurriculoDoc(msg.midia_mime)) {
+  if (!msg || !msg.midia_url || !isAnalisavelCv(msg.midia_mime)) {
     return NextResponse.json(
-      { error: "arquivo_invalido", message: "Mensagem sem currículo (PDF/DOCX) para analisar." },
+      { error: "arquivo_invalido", message: "Mensagem sem currículo analisável (PDF ou DOCX)." },
       { status: 422 },
     );
   }
@@ -67,6 +66,11 @@ export async function POST(req: Request) {
   if (!cand) {
     return NextResponse.json({ error: "arquivo_invalido", message: "Candidato não encontrado." }, { status: 422 });
   }
+  // Defesa em profundidade (espelha send/send-media): usuário comum só age na própria
+  // empresa. Toda escrita abaixo é carimbada com cand.empresa_id (não a do ator).
+  if (!profile.platform_admin && cand.empresa_id !== profile.empresa_id) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   const deps: AnaliseDeps = {
     getCvFile: async (path) => {
@@ -87,7 +91,7 @@ export async function POST(req: Request) {
     },
     registrarAnalise: async (log) => {
       const { error } = await supabase.from("cv_analises").insert({
-        empresa_id: profile.empresa_id,
+        empresa_id: cand.empresa_id, // carimba a empresa do candidato (não a do ator)
         candidato_id: cand.id,
         message_id: parsed.data.messageId,
         score: log.score,
@@ -100,18 +104,32 @@ export async function POST(req: Request) {
       return { error };
     },
     moverParaAnaliseConcluida: async (candidatoId) => {
-      const funil = await getFunilComEtapas();
-      const alvo = funil?.etapas.find((e) => e.nome === ETAPA_ALVO);
+      // Resolve o funil padrão DO CANDIDATO (não o do ator) p/ o move forward-only.
+      const { data: funil } = await supabase
+        .from("funis")
+        .select("id")
+        .eq("empresa_id", cand.empresa_id)
+        .eq("is_default", true)
+        .maybeSingle();
+      if (!funil) return;
+      const { data: etapas } = await supabase
+        .from("funil_etapas")
+        .select("id, nome, ordem")
+        .eq("funil_id", funil.id)
+        .order("ordem", { ascending: true });
+      const alvo = etapas?.find((e) => e.nome === ETAPA_ALVO);
       if (!alvo) return;
-      const atual = funil!.etapas.find((e) => e.id === cand.etapa_id);
-      // forward-only: não retrocede um card já adiantado
+      const atual = cand.etapa_id ? etapas?.find((e) => e.id === cand.etapa_id) : null;
+      // conservador: se o candidato tem etapa mas ela não está neste funil, não move.
+      if (cand.etapa_id && !atual) return;
+      // forward-only: não retrocede um card já adiantado.
       if (atual && atual.ordem >= alvo.ordem) return;
       await supabase
         .from("candidatos")
         .update({ etapa_id: alvo.id, etapa_entrou_em: new Date().toISOString() })
         .eq("id", candidatoId);
       await supabase.from("kanban_history").insert({
-        empresa_id: profile.empresa_id,
+        empresa_id: cand.empresa_id,
         candidato_id: candidatoId,
         de_etapa: cand.etapa_id,
         para_etapa: alvo.id,
@@ -121,16 +139,26 @@ export async function POST(req: Request) {
     },
   };
 
-  const result = await analisarCurriculo(
-    {
-      empresaId: profile.empresa_id,
-      candidatoId: cand.id,
-      cvPath: msg.midia_url,
-      vagaInteresse: cand.vaga_interesse,
-      movidoPor: profile.id,
-    },
-    deps,
-  );
+  let result;
+  try {
+    result = await analisarCurriculo(
+      {
+        empresaId: cand.empresa_id,
+        candidatoId: cand.id,
+        cvPath: msg.midia_url,
+        vagaInteresse: cand.vaga_interesse,
+        movidoPor: profile.id,
+      },
+      deps,
+    );
+  } catch (err) {
+    // Nenhum caminho deve vazar um 500 não-mapeado.
+    console.error("[cv/analyze] erro inesperado:", err);
+    return NextResponse.json(
+      { error: "persist_falhou", message: ERRO_HTTP.persist_falhou.message },
+      { status: 500 },
+    );
+  }
 
   if (result.ok) {
     return NextResponse.json({ ok: true, score: result.score, parecer: result.parecer satisfies Parecer });

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { MessageStatus } from "@/types/database";
 import type { MessageWithSignedUrl } from "@/lib/chat/queries";
-import { isCurriculoDoc } from "@/lib/whatsapp/media-helpers";
+import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
 import { Composer } from "./composer";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
@@ -211,7 +211,7 @@ function ServerMediaContent({
         ) : (
           <MediaPlaceholder />
         )}
-        {isCurriculoDoc(msg.midia_mime) && (
+        {isAnalisavelCv(msg.midia_mime) && (
           <AnalisarCurriculoButton messageId={msg.id} isOutbound={isOutbound} />
         )}
       </div>
