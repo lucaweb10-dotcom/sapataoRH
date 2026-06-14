@@ -18,3 +18,24 @@ export async function dispatchSend(payload: {
   if (!res.ok) throw new Error(`send failed: ${res.status}`);
   return { ok: true };
 }
+
+/**
+ * Dispatch for media sends. Posts to /api/whatsapp/send-media and THROWS on
+ * any HTTP error so the queue worker marks the item 'failed'.
+ */
+export async function dispatchSendMedia(payload: {
+  clientMessageId: string;
+  conversationId: string;
+  fileBase64: string;
+  mime: string;
+  fileName?: string;
+  caption?: string;
+}): Promise<{ ok: true }> {
+  const res = await fetch("/api/whatsapp/send-media", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`send-media failed: ${res.status}`);
+  return { ok: true };
+}

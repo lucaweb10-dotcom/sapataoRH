@@ -9,6 +9,8 @@ export interface QueueItem {
   status: QueueItemStatus;
   attempts: number;
   createdAt: string;
+  /** Present only for media items — carries the optimistic preview objectURL. */
+  media?: { objectUrl: string; mime: string; fileName: string };
 }
 
 export type QueueState = Record<string, QueueItem[]>;
