@@ -159,6 +159,7 @@ export type FunilEtapa = Timestamps & {
   is_terminal: boolean;
   requires_confirm: boolean;
   status_destino: string | null;
+  marcador: string | null;
 };
 
 export type KanbanHistory = {

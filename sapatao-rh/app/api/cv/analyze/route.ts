@@ -114,10 +114,11 @@ export async function POST(req: Request) {
       if (!funil) return;
       const { data: etapas } = await supabase
         .from("funil_etapas")
-        .select("id, nome, ordem")
+        .select("id, nome, ordem, marcador")
         .eq("funil_id", funil.id)
         .order("ordem", { ascending: true });
-      const alvo = etapas?.find((e) => e.nome === ETAPA_ALVO);
+      // marcador estável (SP2b) com fallback pelo nome (resiliente a rename)
+      const alvo = etapas?.find((e) => e.marcador === "ia_concluida") ?? etapas?.find((e) => e.nome === ETAPA_ALVO);
       if (!alvo) return;
       const atual = cand.etapa_id ? etapas?.find((e) => e.id === cand.etapa_id) : null;
       // conservador: se o candidato tem etapa mas ela não está neste funil, não move.

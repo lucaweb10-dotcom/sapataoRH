@@ -147,7 +147,7 @@ async function main() {
     { nome: "Novo Lead", cor: "#4A7C59" },
     { nome: "Triagem Inicial", cor: "#4A7C59" },
     { nome: "Currículo Recebido", cor: "#E85D2F" },
-    { nome: "Análise IA Concluída", cor: "#E85D2F" },
+    { nome: "Análise IA Concluída", cor: "#E85D2F", marcador: "ia_concluida" },
     { nome: "Apto p/ Entrevista", cor: "#FFD500" },
     { nome: "Entrevista Agendada", cor: "#FFD500" },
     { nome: "Aprovado p/ Gestor", cor: "#1E4D2B" },
@@ -176,9 +176,13 @@ async function main() {
           is_terminal: e.is_terminal ?? false,
           requires_confirm: e.requires_confirm ?? false,
           status_destino: e.status_destino ?? null,
+          marcador: e.marcador ?? null,
         })
         .select("id")
         .single());
+    } else if (e.marcador) {
+      // idempotente: garante o marcador estável mesmo em etapas já existentes
+      await admin.from("funil_etapas").update({ marcador: e.marcador }).eq("id", row.id);
     }
     if (i === 0) primeiraEtapaId = row.id;
   }
