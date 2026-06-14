@@ -137,6 +137,39 @@ export type WhatsappOptout = {
   created_at: string;
 }
 
+export type Funil = Timestamps & {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  ordem: number;
+  is_default: boolean;
+  ativo: boolean;
+};
+
+export type FunilEtapa = Timestamps & {
+  id: string;
+  empresa_id: string;
+  funil_id: string;
+  nome: string;
+  ordem: number;
+  cor: string;
+  sla_dias: number | null;
+  is_terminal: boolean;
+  requires_confirm: boolean;
+  status_destino: string | null;
+};
+
+export type KanbanHistory = {
+  id: string;
+  empresa_id: string;
+  candidato_id: string;
+  de_etapa: string | null;
+  para_etapa: string | null;
+  movido_por: string | null;
+  observacao: string | null;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -202,6 +235,24 @@ export interface Database {
         Row: WhatsappOptout;
         Insert: Partial<WhatsappOptout> & { empresa_id: string; telefone: string };
         Update: Partial<WhatsappOptout>;
+        Relationships: [];
+      };
+      funis: {
+        Row: Funil;
+        Insert: Partial<Funil> & { empresa_id: string; nome: string };
+        Update: Partial<Funil>;
+        Relationships: [];
+      };
+      funil_etapas: {
+        Row: FunilEtapa;
+        Insert: Partial<FunilEtapa> & { empresa_id: string; funil_id: string; nome: string };
+        Update: Partial<FunilEtapa>;
+        Relationships: [];
+      };
+      kanban_history: {
+        Row: KanbanHistory;
+        Insert: Partial<KanbanHistory> & { empresa_id: string; candidato_id: string };
+        Update: Partial<KanbanHistory>;
         Relationships: [];
       };
     };

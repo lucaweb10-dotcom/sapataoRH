@@ -123,7 +123,77 @@ async function main() {
       });
     }
   }
-  console.log("templates de triagem prontos. Seed concluído.");
+  console.log("templates de triagem prontos.");
+
+  // 7) funil padrão + 10 etapas (idempotente)
+  let { data: funil } = await admin
+    .from("funis")
+    .select("id")
+    .eq("empresa_id", empresa.id)
+    .eq("is_default", true)
+    .maybeSingle();
+  if (!funil) {
+    ({ data: funil } = await admin
+      .from("funis")
+      .insert({ empresa_id: empresa.id, nome: "Recrutamento & Seleção", ordem: 0, is_default: true })
+      .select("id")
+      .single());
+    console.log("funil padrão criado");
+  } else {
+    console.log("funil padrão já existe");
+  }
+
+  const ETAPAS = [
+    { nome: "Novo Lead", cor: "#4A7C59" },
+    { nome: "Triagem Inicial", cor: "#4A7C59" },
+    { nome: "Currículo Recebido", cor: "#E85D2F" },
+    { nome: "Análise IA Concluída", cor: "#E85D2F" },
+    { nome: "Apto p/ Entrevista", cor: "#FFD500" },
+    { nome: "Entrevista Agendada", cor: "#FFD500" },
+    { nome: "Aprovado p/ Gestor", cor: "#1E4D2B" },
+    { nome: "Contratado", cor: "#1E4D2B", is_terminal: true, requires_confirm: true, status_destino: "contratado" },
+    { nome: "Reprovado", cor: "#9CA3AF", is_terminal: true, requires_confirm: true, status_destino: "reprovado" },
+    { nome: "Desistente", cor: "#9CA3AF", is_terminal: true, requires_confirm: true, status_destino: "desistente" },
+  ];
+  let primeiraEtapaId = null;
+  for (let i = 0; i < ETAPAS.length; i++) {
+    const e = ETAPAS[i];
+    let { data: row } = await admin
+      .from("funil_etapas")
+      .select("id")
+      .eq("funil_id", funil.id)
+      .eq("nome", e.nome)
+      .maybeSingle();
+    if (!row) {
+      ({ data: row } = await admin
+        .from("funil_etapas")
+        .insert({
+          empresa_id: empresa.id,
+          funil_id: funil.id,
+          nome: e.nome,
+          ordem: i + 1,
+          cor: e.cor,
+          is_terminal: e.is_terminal ?? false,
+          requires_confirm: e.requires_confirm ?? false,
+          status_destino: e.status_destino ?? null,
+        })
+        .select("id")
+        .single());
+    }
+    if (i === 0) primeiraEtapaId = row.id;
+  }
+  console.log("etapas do funil prontas");
+
+  // 8) backfill: candidatos sem etapa -> 1ª etapa (Novo Lead)
+  if (primeiraEtapaId) {
+    await admin
+      .from("candidatos")
+      .update({ etapa_id: primeiraEtapaId, etapa_entrou_em: new Date().toISOString() })
+      .eq("empresa_id", empresa.id)
+      .is("etapa_id", null);
+  }
+
+  console.log("Seed concluído.");
 }
 
 main().catch((e) => {
