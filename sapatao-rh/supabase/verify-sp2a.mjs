@@ -71,7 +71,6 @@ const terminais = etapas.filter((e) => e.is_terminal).map((e) => e.status_destin
 ok("3 terminais com status_destino", terminais.length === 3, terminais.join(","));
 
 // 7) trigger funciona: insere candidato sem etapa -> cai na 1ª etapa
-const primeira = etapas[0];
 const ins = (await client.query(
   `insert into public.candidatos(empresa_id, nome, telefone, origem)
    values($1,'__verify_sp2a__','000verify',  'verify') returning id, etapa_id, etapa_entrou_em`,

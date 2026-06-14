@@ -82,6 +82,8 @@ export type Candidato = Timestamps & {
   parecer_ia: Record<string, unknown> | null;
   curriculo_url: string | null;
   status: "ativo" | "contratado" | "reprovado" | "desistente";
+  etapa_id: string | null;
+  etapa_entrou_em: string | null;
 }
 
 export type Conversation = Timestamps & {

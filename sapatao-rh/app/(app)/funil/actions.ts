@@ -1,0 +1,109 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getCurrentProfile } from "@/lib/auth/current-profile";
+import { createClient } from "@/lib/supabase/server";
+import { moverCandidato, type MoverDeps, type MoverResult } from "@/lib/funil/mover";
+import { getHistorico, type HistoricoEntry } from "@/lib/funil/queries";
+import { moverSchema, notasSchema } from "@/lib/validations/funil";
+import type { Candidato } from "@/types/database";
+
+function canWrite(role: string, platformAdmin: boolean): boolean {
+  return platformAdmin || role === "admin" || role === "rh";
+}
+
+/** Moves a candidato to another stage (RLS-scoped via the user session client),
+ *  logging kanban_history. admin/rh only. */
+export async function moverCandidatoAction(input: {
+  candidatoId: string;
+  paraEtapaId: string;
+  observacao?: string;
+}): Promise<MoverResult> {
+  const profile = await getCurrentProfile();
+  if (!profile || !canWrite(profile.role, profile.platform_admin)) {
+    return { ok: false, error: "not_found" };
+  }
+  const parsed = moverSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "not_found" };
+
+  const supabase = await createClient();
+  const deps: MoverDeps = {
+    getCandidato: async (id) => {
+      const { data } = await supabase
+        .from("candidatos")
+        .select("etapa_id, empresa_id")
+        .eq("id", id)
+        .maybeSingle();
+      return (data as { etapa_id: string | null; empresa_id: string } | null) ?? null;
+    },
+    getEtapa: async (id) => {
+      const { data } = await supabase
+        .from("funil_etapas")
+        .select("empresa_id, is_terminal, status_destino")
+        .eq("id", id)
+        .maybeSingle();
+      return (data as { empresa_id: string; is_terminal: boolean; status_destino: string | null } | null) ?? null;
+    },
+    updateEtapa: async (candidatoId, etapaId, statusTerminal) => {
+      const patch: Partial<Candidato> = {
+        etapa_id: etapaId,
+        etapa_entrou_em: new Date().toISOString(),
+      };
+      // coalesce: only flip candidato.status when moving into a terminal stage
+      if (statusTerminal) patch.status = statusTerminal as Candidato["status"];
+      const { error } = await supabase.from("candidatos").update(patch).eq("id", candidatoId);
+      return { error };
+    },
+    insertHistory: async (row) => {
+      const { error } = await supabase.from("kanban_history").insert({
+        empresa_id: profile.empresa_id,
+        candidato_id: row.candidatoId,
+        de_etapa: row.deEtapa,
+        para_etapa: row.paraEtapa,
+        movido_por: row.movidoPor,
+        observacao: row.observacao ?? null,
+      });
+      return { error };
+    },
+  };
+
+  const result = await moverCandidato(
+    {
+      empresaId: profile.empresa_id,
+      candidatoId: parsed.data.candidatoId,
+      paraEtapaId: parsed.data.paraEtapaId,
+      movidoPor: profile.id,
+      observacao: parsed.data.observacao,
+    },
+    deps,
+  );
+  if (result.ok) revalidatePath("/funil");
+  return result;
+}
+
+/** Saves a candidato's internal notes. admin/rh only. */
+export async function salvarNotas(input: { candidatoId: string; notas: string }): Promise<{ ok: boolean }> {
+  const profile = await getCurrentProfile();
+  if (!profile || !canWrite(profile.role, profile.platform_admin)) return { ok: false };
+  const parsed = notasSchema.safeParse(input);
+  if (!parsed.success) return { ok: false };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("candidatos")
+    .update({ notas_internas: parsed.data.notas })
+    .eq("id", parsed.data.candidatoId);
+  if (error) {
+    console.error("[funil/actions] salvarNotas error:", error);
+    return { ok: false };
+  }
+  revalidatePath("/funil");
+  return { ok: true };
+}
+
+/** Loads a candidato's stage-move history (RLS-scoped) for the modal. */
+export async function carregarHistorico(candidatoId: string): Promise<HistoricoEntry[]> {
+  const profile = await getCurrentProfile();
+  if (!profile) return [];
+  return getHistorico(candidatoId);
+}
