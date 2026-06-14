@@ -193,6 +193,33 @@ async function main() {
       .is("etapa_id", null);
   }
 
+  // 9) critérios default da IA (idempotente — 1 por empresa)
+  const { data: crit } = await admin
+    .from("ia_criterios")
+    .select("id")
+    .eq("empresa_id", empresa.id)
+    .maybeSingle();
+  if (!crit) {
+    await admin.from("ia_criterios").insert({
+      empresa_id: empresa.id,
+      prompt_base:
+        "Você é um analista de RH da Estação Sapatão (rede de postos de combustível). " +
+        "Avalie a aderência do candidato às vagas operacionais (Atendente, Frentista, Caixa, Cozinha) " +
+        "com base no currículo. IA não decide — apenas acelera a triagem; o humano valida.",
+      criterios: [
+        "Idade igual ou maior que 18 anos",
+        "Reside a uma distância razoável da unidade (locomoção viável)",
+        "Possui veículo próprio ou meio de locomoção",
+        "Experiência em atendimento ao público",
+        "Disponibilidade de horário, incluindo turnos",
+      ],
+      modelo: "mock",
+    });
+    console.log("ia_criterios default criado");
+  } else {
+    console.log("ia_criterios default já existe");
+  }
+
   console.log("Seed concluído.");
 }
 

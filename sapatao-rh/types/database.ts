@@ -172,6 +172,28 @@ export type KanbanHistory = {
   created_at: string;
 };
 
+export type IaCriterios = Timestamps & {
+  id: string;
+  empresa_id: string;
+  prompt_base: string;
+  criterios: string[];
+  modelo: string;
+};
+
+export type CvAnalise = {
+  id: string;
+  empresa_id: string;
+  candidato_id: string;
+  message_id: string | null;
+  score: number | null;
+  parecer: Record<string, unknown> | null;
+  modelo: string | null;
+  tokens_est: number | null;
+  status: string;
+  movido_por: string | null;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -255,6 +277,18 @@ export interface Database {
         Row: KanbanHistory;
         Insert: Partial<KanbanHistory> & { empresa_id: string; candidato_id: string };
         Update: Partial<KanbanHistory>;
+        Relationships: [];
+      };
+      ia_criterios: {
+        Row: IaCriterios;
+        Insert: Partial<IaCriterios> & { empresa_id: string; prompt_base: string };
+        Update: Partial<IaCriterios>;
+        Relationships: [];
+      };
+      cv_analises: {
+        Row: CvAnalise;
+        Insert: Partial<CvAnalise> & { empresa_id: string; candidato_id: string; status: string };
+        Update: Partial<CvAnalise>;
         Relationships: [];
       };
     };
