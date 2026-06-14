@@ -14,6 +14,7 @@ export type CandidatoFunil = Pick<
   | "endereco"
   | "vaga_interesse"
   | "score_ia"
+  | "parecer_ia"
   | "tags"
   | "etapa_id"
   | "etapa_entrou_em"
@@ -68,7 +69,7 @@ export async function listCandidatosDoFunil(
   let query = supabase
     .from("candidatos")
     .select(
-      "id, nome, telefone, cep, idade, endereco, vaga_interesse, score_ia, tags, etapa_id, etapa_entrou_em, avatar_url, unidade_id, notas_internas, status, conversations(id)",
+      "id, nome, telefone, cep, idade, endereco, vaga_interesse, score_ia, parecer_ia, tags, etapa_id, etapa_entrou_em, avatar_url, unidade_id, notas_internas, status, conversations(id)",
     )
     .in("etapa_id", etapaIds)
     .order("etapa_entrou_em", { ascending: true, nullsFirst: true });

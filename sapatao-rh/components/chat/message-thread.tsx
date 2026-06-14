@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { MessageStatus } from "@/types/database";
@@ -104,31 +105,45 @@ function DocumentIcon({ className }: { className?: string }) {
 // ── Analisar Currículo button ─────────────────────────────────────────────────
 
 function AnalisarCurriculoButton({ messageId, isOutbound }: { messageId: string; isOutbound: boolean }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   async function handleClick() {
+    if (loading) return;
+    setLoading(true);
     try {
-      await fetch("/api/cv/analyze", {
+      const res = await fetch("/api/cv/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId }),
       });
+      const body = await res.json().catch(() => null);
+      if (res.ok) {
+        toast.success(`Análise concluída — score ${body?.score ?? "?"}/100`);
+        router.refresh();
+      } else {
+        toast.error(body?.message ?? "Falha ao analisar o currículo.");
+      }
     } catch {
-      // network error is fine — the server is a stub
+      toast.error("Erro de rede ao analisar o currículo.");
+    } finally {
+      setLoading(false);
     }
-    toast("Análise de IA chega na SP3");
   }
 
   return (
     <button
       type="button"
       onClick={handleClick}
+      disabled={loading}
       className={cn(
-        "mt-1 rounded px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-1",
+        "mt-1 rounded px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-1 disabled:opacity-60",
         isOutbound
           ? "bg-white/20 text-white hover:bg-white/30 focus-visible:ring-white/50"
           : "bg-sapatao-verde/10 text-sapatao-verde hover:bg-sapatao-verde/20 focus-visible:ring-sapatao-verde",
       )}
     >
-      Analisar Currículo
+      {loading ? "Analisando…" : "Analisar Currículo"}
     </button>
   );
 }

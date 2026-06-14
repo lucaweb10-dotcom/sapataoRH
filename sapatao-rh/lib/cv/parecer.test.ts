@@ -28,7 +28,8 @@ describe("parseParecer", () => {
     expect(parseParecer(JSON.stringify({ ...JSON.parse(valido), verdict: "x" }))).toBeNull();
   });
   it("rejeita campo faltando", () => {
-    const { resumo: _omit, ...semResumo } = JSON.parse(valido);
+    const semResumo = JSON.parse(valido);
+    delete semResumo.resumo;
     expect(parseParecer(JSON.stringify(semResumo))).toBeNull();
   });
   it("rejeita JSON quebrado", () => {

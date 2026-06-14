@@ -1,4 +1,5 @@
 import type { Candidato } from "@/types/database";
+import { ParecerView } from "@/components/cv/parecer-view";
 
 interface Props {
   candidato: Pick<
@@ -10,6 +11,7 @@ interface Props {
     | "tags"
     | "notas_internas"
     | "score_ia"
+    | "parecer_ia"
     | "status"
   >;
 }
@@ -67,14 +69,10 @@ export function CandidatePanel({ candidato }: Props) {
           </div>
         )}
 
-        {/* Score IA placeholder (SP3) */}
+        {/* Análise de IA */}
         <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-3">
-          <p className="text-xs font-medium text-neutro-700">Score IA</p>
-          {candidato.score_ia !== null && candidato.score_ia !== undefined ? (
-            <p className="mt-1 text-2xl font-bold text-sapatao-verde">{candidato.score_ia}</p>
-          ) : (
-            <p className="mt-1 text-sm text-neutro-700">Análise disponível no SP3</p>
-          )}
+          <p className="mb-2 text-xs font-medium text-neutro-700">Análise de IA</p>
+          <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} />
         </div>
       </div>
     </div>
