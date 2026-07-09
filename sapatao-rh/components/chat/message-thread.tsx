@@ -182,8 +182,31 @@ function ServerMediaContent({
 
   if (msg.tipo === "audio" || msg.tipo === "ptt") {
     return url ? (
-       
       <audio controls src={url} className="max-w-[240px]" />
+    ) : (
+      <MediaPlaceholder />
+    );
+  }
+
+  if (msg.tipo === "video") {
+    return (
+      <div>
+        {url ? (
+          <video controls src={url} className="max-w-[240px] rounded-lg" />
+        ) : (
+          <MediaPlaceholder />
+        )}
+        {msg.conteudo && (
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.conteudo}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (msg.tipo === "sticker") {
+    return url ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="figurinha" className="max-w-[120px]" />
     ) : (
       <MediaPlaceholder />
     );
@@ -220,7 +243,7 @@ function ServerMediaContent({
     );
   }
 
-  // text / system / video / sticker / unknown — fallback
+  // text / system / unknown — fallback
   return <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>;
 }
 
