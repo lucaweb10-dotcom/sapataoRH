@@ -1,3 +1,4 @@
+import { somenteDigitos, textoIlikeSeguro } from "@/lib/shared/busca";
 import type { Candidato } from "@/types/database";
 
 export type StatusCandidato = Candidato["status"];
@@ -46,12 +47,8 @@ export function parseFiltros(sp: Record<string, string | string[] | undefined>):
  *  Commas/parens are stripped (they would break or() parsing) and ilike
  *  wildcards are escaped so user input is matched literally. */
 export function buscaOr(q: string): string | null {
-  const texto = q
-    .replace(/[,()]/g, " ")
-    .replace(/([\\%_])/g, "\\$1")
-    .replace(/\s+/g, " ")
-    .trim();
-  const digitos = q.replace(/\D/g, "");
+  const texto = textoIlikeSeguro(q);
+  const digitos = somenteDigitos(q);
 
   const partes: string[] = [];
   if (texto.length > 0) partes.push(`nome.ilike.*${texto}*`);

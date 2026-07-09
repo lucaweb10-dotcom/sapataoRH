@@ -5,12 +5,12 @@ import { PageContainer } from "@/components/shell/page-container";
 import { Button } from "@/components/ui/button";
 import { FiltrosBar } from "@/components/candidatos/filtros-bar";
 import { CandidatosTabela, type EtapaInfo } from "@/components/candidatos/tabela";
-import { PaginacaoNav } from "@/components/candidatos/paginacao-nav";
+import { PaginacaoNav } from "@/components/shared/paginacao-nav";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilComEtapas } from "@/lib/funil/queries";
 import { parseFiltros } from "@/lib/candidatos/filtros";
 import { listCandidatos } from "@/lib/candidatos/queries";
-import { totalPaginas, resumoPaginacao } from "@/lib/candidatos/paginacao";
+import { totalPaginas, resumoPaginacao } from "@/lib/shared/paginacao";
 
 export const dynamic = "force-dynamic";
 

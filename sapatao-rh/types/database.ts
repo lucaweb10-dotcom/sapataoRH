@@ -207,6 +207,43 @@ export type CvAnalise = {
   created_at: string;
 };
 
+export type FuncionarioStatus = "ativo" | "inativo" | "afastado";
+
+export type Funcionario = Timestamps & {
+  id: string;
+  empresa_id: string;
+  candidato_origem_id: string | null;
+  nome_completo: string;
+  cpf: string | null;
+  rg: string | null;
+  data_nascimento: string | null;
+  telefone: string | null;
+  email: string | null;
+  cep: string | null;
+  endereco: string | null;
+  cargo: string;
+  unidade_id: string | null;
+  data_admissao: string;
+  data_demissao: string | null;
+  salario: number | null;
+  jornada: string | null;
+  status: FuncionarioStatus;
+};
+
+export type OcorrenciaTipo =
+  | "falta" | "atestado" | "advertencia" | "elogio" | "desligamento" | "outro";
+
+export type FuncionarioOcorrencia = {
+  id: string;
+  empresa_id: string;
+  funcionario_id: string;
+  tipo: OcorrenciaTipo;
+  data: string;
+  observacao: string | null;
+  registrado_por: string | null;
+  created_at: string;
+};
+
 export type EntrevistaFormato = "presencial" | "online";
 
 export type Entrevista = {
@@ -328,6 +365,28 @@ export interface Database {
         Row: Entrevista;
         Insert: Partial<Entrevista> & { empresa_id: string; candidato_id: string; data_hora: string; formato: EntrevistaFormato };
         Update: Partial<Entrevista>;
+        Relationships: [];
+      };
+      funcionarios: {
+        Row: Funcionario;
+        Insert: Partial<Funcionario> & {
+          empresa_id: string;
+          nome_completo: string;
+          cargo: string;
+          data_admissao: string;
+        };
+        Update: Partial<Funcionario>;
+        Relationships: [];
+      };
+      funcionario_ocorrencias: {
+        Row: FuncionarioOcorrencia;
+        Insert: Partial<FuncionarioOcorrencia> & {
+          empresa_id: string;
+          funcionario_id: string;
+          tipo: OcorrenciaTipo;
+          data: string;
+        };
+        Update: Partial<FuncionarioOcorrencia>;
         Relationships: [];
       };
     };

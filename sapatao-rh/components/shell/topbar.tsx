@@ -30,6 +30,10 @@ export function Topbar({
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutro-200 bg-card px-4 shadow-warm">
       <Select
         value={unidadeId ?? "todas"}
+        items={{
+          todas: "Todas as unidades",
+          ...Object.fromEntries(unidades.map((u) => [u.id, u.nome])),
+        }}
         onValueChange={(v: string | null) =>
           setUnidade(v === "todas" ? null : v)
         }

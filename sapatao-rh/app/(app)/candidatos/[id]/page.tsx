@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, UserRoundCheck } from "lucide-react";
 import { PageContainer } from "@/components/shell/page-container";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { StatusBadge } from "@/components/candidatos/status-badge";
 import { FichaAcoes } from "@/components/candidatos/ficha-acoes";
@@ -12,6 +13,7 @@ import { ParecerView } from "@/components/cv/parecer-view";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilComEtapas, getHistorico } from "@/lib/funil/queries";
 import { getCandidatoFicha, getEntrevistaVigente } from "@/lib/candidatos/queries";
+import { getFuncionarioDoCandidato } from "@/lib/funcionarios/queries";
 import type { Entrevista } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +63,10 @@ export default async function CandidatoFichaPage({
   ]);
   if (!candidato) notFound();
 
+  // Contratado → promoção a funcionário (PRD 9.5).
+  const funcionarioVinculado =
+    candidato.status === "contratado" ? await getFuncionarioDoCandidato(id) : null;
+
   const etapas = funil?.etapas ?? [];
   const etapaAtual = etapas.find((e) => e.id === candidato.etapa_id) ?? null;
   const nomeEtapa = (etapaId: string | null) =>
@@ -108,15 +114,34 @@ export default async function CandidatoFichaPage({
           </div>
         </div>
 
-        <FichaAcoes
-          candidatoId={candidato.id}
-          nome={candidato.nome}
-          etapaId={candidato.etapa_id}
-          conversationId={candidato.conversationId}
-          etapas={etapas}
-          canEdit={canEdit}
-          temEntrevista={!!entrevista}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {candidato.status === "contratado" && canEdit && (
+            <Button
+              size="sm"
+              render={
+                <Link
+                  href={
+                    funcionarioVinculado
+                      ? `/funcionarios/${funcionarioVinculado.id}`
+                      : `/funcionarios/novo?candidato=${candidato.id}`
+                  }
+                />
+              }
+            >
+              <UserRoundCheck className="size-3.5" />
+              {funcionarioVinculado ? "Ver funcionário" : "Cadastrar como funcionário"}
+            </Button>
+          )}
+          <FichaAcoes
+            candidatoId={candidato.id}
+            nome={candidato.nome}
+            etapaId={candidato.etapa_id}
+            conversationId={candidato.conversationId}
+            etapas={etapas}
+            canEdit={canEdit}
+            temEntrevista={!!entrevista}
+          />
+        </div>
       </div>
 
       {/* Corpo em 2 colunas */}

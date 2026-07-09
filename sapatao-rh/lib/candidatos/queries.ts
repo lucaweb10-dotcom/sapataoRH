@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Candidato } from "@/types/database";
 import { buscaOr, type FiltrosCandidatos } from "./filtros";
-import { rangeDaPagina } from "./paginacao";
+import { rangeDaPagina } from "@/lib/shared/paginacao";
 
 /** Row of the /candidatos table (RLS-scoped to the empresa). */
 export type CandidatoLista = Pick<

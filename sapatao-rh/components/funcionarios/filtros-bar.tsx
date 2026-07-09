@@ -11,21 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STATUS_VALIDOS } from "@/lib/candidatos/filtros";
-import type { FunilEtapa } from "@/types/database";
+import type { Unidade } from "@/types/database";
 
-const STATUS_LABEL: Record<string, string> = {
-  ativo: "Ativo",
-  contratado: "Contratado",
-  reprovado: "Reprovado",
-  desistente: "Desistente",
-};
+const STATUS_OPCOES = [
+  { value: "ativo", label: "Ativos" },
+  { value: "inativo", label: "Inativos" },
+  { value: "afastado", label: "Afastados" },
+  { value: "todos", label: "Todos" },
+];
 
-const TODOS = "todos";
+const TODAS = "todas";
 
-/** URL-driven toolbar: busca (debounced), status e etapa. Changing any filter
- *  resets the page param so results always start at page 1. */
-export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
+/** Toolbar URL-driven. Default de status é 'ativo' (sem param na URL);
+ *  qualquer mudança de filtro reseta a página. */
+export function FuncionariosFiltros({ unidades }: { unidades: Unidade[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -34,9 +33,8 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
   const [q, setQ] = useState(qUrl);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Render-time sync: when the URL q changes from outside (back/forward,
-  // limpar), mirror it into the input — but ignore the echo of our own
-  // debounced update, or it would clobber in-flight typing.
+  // Render-time sync (ver candidatos/filtros-bar): espelha URL externa sem
+  // clobberar digitação em andamento.
   const [qAplicado, setQAplicado] = useState(qUrl);
   const [prevQUrl, setPrevQUrl] = useState(qUrl);
   if (prevQUrl !== qUrl) {
@@ -50,7 +48,7 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
   const aplicar = (patch: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(patch)) {
-      if (value === null || value === "" || value === TODOS) params.delete(key);
+      if (value === null || value === "") params.delete(key);
       else params.set(key, value);
     }
     params.delete("p");
@@ -67,9 +65,9 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
     }, 350);
   };
 
-  const status = searchParams.get("status") ?? TODOS;
-  const etapa = searchParams.get("etapa") ?? TODOS;
-  const temFiltro = qUrl !== "" || status !== TODOS || etapa !== TODOS;
+  const status = searchParams.get("status") ?? "ativo";
+  const unidade = searchParams.get("unidade") ?? TODAS;
+  const temFiltro = qUrl !== "" || searchParams.get("status") !== null || unidade !== TODAS;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -78,50 +76,46 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
         <Input
           value={q}
           onChange={(e) => onBusca(e.target.value)}
-          placeholder="Buscar por nome ou telefone…"
+          placeholder="Buscar por nome, cargo ou CPF…"
           className="pl-8"
-          aria-label="Buscar candidato por nome ou telefone"
+          aria-label="Buscar funcionário por nome, cargo ou CPF"
         />
       </div>
 
       <Select
         value={status}
-        items={{
-          [TODOS]: "Todos os status",
-          ...Object.fromEntries(STATUS_VALIDOS.map((s) => [s, STATUS_LABEL[s]])),
-        }}
-        onValueChange={(v: string | null) => aplicar({ status: v })}
+        items={Object.fromEntries(STATUS_OPCOES.map((o) => [o.value, o.label]))}
+        onValueChange={(v: string | null) => aplicar({ status: v === "ativo" ? null : v })}
       >
         <SelectTrigger size="sm" aria-label="Filtrar por status">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={TODOS}>Todos os status</SelectItem>
-          {STATUS_VALIDOS.map((s) => (
-            <SelectItem key={s} value={s}>
-              {STATUS_LABEL[s]}
+          {STATUS_OPCOES.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {etapas.length > 0 && (
+      {unidades.length > 1 && (
         <Select
-          value={etapa}
+          value={unidade}
           items={{
-            [TODOS]: "Todas as etapas",
-            ...Object.fromEntries(etapas.map((e) => [e.id, e.nome])),
+            [TODAS]: "Todas as unidades",
+            ...Object.fromEntries(unidades.map((u) => [u.id, u.nome])),
           }}
-          onValueChange={(v: string | null) => aplicar({ etapa: v })}
+          onValueChange={(v: string | null) => aplicar({ unidade: v === TODAS ? null : v })}
         >
-          <SelectTrigger size="sm" aria-label="Filtrar por etapa">
+          <SelectTrigger size="sm" aria-label="Filtrar por unidade">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={TODOS}>Todas as etapas</SelectItem>
-            {etapas.map((e) => (
-              <SelectItem key={e.id} value={e.id}>
-                {e.nome}
+            <SelectItem value={TODAS}>Todas as unidades</SelectItem>
+            {unidades.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.nome}
               </SelectItem>
             ))}
           </SelectContent>
