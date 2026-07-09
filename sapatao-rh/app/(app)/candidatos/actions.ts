@@ -157,7 +157,7 @@ export async function iniciarConversa(
 /** Profiles ativos da empresa com papel admin/rh (selects de responsável). */
 export async function listarResponsaveis(): Promise<Responsavel[]> {
   const profile = await getCurrentProfile();
-  if (!profile) return [];
+  if (!profile || !canWrite(profile.role, profile.platform_admin)) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
