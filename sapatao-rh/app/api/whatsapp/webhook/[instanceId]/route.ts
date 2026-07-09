@@ -128,7 +128,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
     // Diagnóstico: guarda o payload bruto + classificação (best-effort, nunca falha o 200).
     // Retenção de 50/empresa via prune (função SQL).
     try {
-      await admin.from("whatsapp_webhook_events").insert({
+      const { error: logErr } = await admin.from("whatsapp_webhook_events").insert({
         empresa_id: inst.empresa_id,
         event: typeof (raw as Record<string, unknown>)?.["event"] === "string"
           ? ((raw as Record<string, unknown>)["event"] as string)
@@ -138,8 +138,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
         parsed_kind: event.kind,
         payload: (raw ?? {}) as Record<string, unknown>,
       });
-      await (admin as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> })
-        .rpc("prune_whatsapp_webhook_events", { p_empresa_id: inst.empresa_id, p_keep: 50 });
+      if (logErr) console.error("webhook event log insert error:", logErr.message);
+      const { error: pruneErr } = await (admin as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      }).rpc("prune_whatsapp_webhook_events", { p_empresa_id: inst.empresa_id, p_keep: 50 });
+      if (pruneErr) console.error("webhook event prune error:", pruneErr.message);
     } catch (logErr) {
       console.error("webhook event log error:", logErr);
     }
