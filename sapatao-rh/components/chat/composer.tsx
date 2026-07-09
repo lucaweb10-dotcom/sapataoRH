@@ -1,17 +1,80 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { FileText } from "lucide-react";
 import { useSendQueue } from "@/stores/send-queue";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
 
+export type TemplatePronto = {
+  id: string;
+  nome: string;
+  categoria: string;
+  conteudo: string;
+};
+
 interface Props {
   conversationId: string;
+  /** Conteúdo do template já preenchido (via ?tpl=) — aplicado 1x, só com campo vazio. */
+  prefill?: string | null;
+  /** Templates ativos com variáveis resolvidas para o candidato da conversa. */
+  templates?: TemplatePronto[];
 }
 
-export function Composer({ conversationId }: Props) {
+export function Composer({ conversationId, prefill = null, templates = [] }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const enqueueAndRun = useSendQueue((s) => s.enqueueAndRun);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  function autoGrow(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  // Prefill do template (?tpl=): só na montagem e só se o campo estiver vazio.
+  // Depois de aplicar, tira o tpl da URL para não re-preencher em reloads.
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current || !prefill) return;
+    const el = textareaRef.current;
+    if (!el || el.value.trim()) return;
+    prefillApplied.current = true;
+    el.value = prefill;
+    autoGrow(el);
+    el.focus();
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.has("tpl")) {
+      params.delete("tpl");
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }
+  }, [prefill, pathname, router, searchParams]);
+
+  // Picker: templates agrupados por categoria.
+  const grupos = useMemo(() => {
+    const map = new Map<string, TemplatePronto[]>();
+    for (const t of templates) {
+      const lista = map.get(t.categoria) ?? [];
+      lista.push(t);
+      map.set(t.categoria, lista);
+    }
+    return [...map.entries()];
+  }, [templates]);
+
+  function inserirTemplate(t: TemplatePronto) {
+    const el = textareaRef.current;
+    if (!el) return;
+    // Campo vazio: substitui; senão anexa ao final (spec §4).
+    el.value = el.value.trim() ? `${el.value}\n${t.conteudo}` : t.conteudo;
+    autoGrow(el);
+    el.focus();
+    setPickerOpen(false);
+  }
 
   function handleSend() {
     const el = textareaRef.current;
@@ -39,9 +102,7 @@ export function Composer({ conversationId }: Props) {
   }
 
   function handleInput(e: React.FormEvent<HTMLTextAreaElement>) {
-    const el = e.currentTarget;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    autoGrow(e.currentTarget);
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -108,6 +169,45 @@ export function Composer({ conversationId }: Props) {
           className="hidden"
           onChange={handleFileChange}
         />
+
+        {/* Picker de templates */}
+        {templates.length > 0 && (
+          <div className="relative mb-px">
+            <button
+              type="button"
+              aria-label="Inserir template"
+              title="Inserir template"
+              onClick={() => setPickerOpen((o) => !o)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutro-200 bg-neutro-50 text-neutro-700 transition-colors hover:bg-neutro-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sapatao-verde/50 active:translate-y-px"
+            >
+              <FileText className="size-4" />
+            </button>
+            {pickerOpen && (
+              <div className="absolute bottom-11 left-0 z-20 max-h-72 w-72 overflow-y-auto rounded-lg border border-neutro-200 bg-white p-2 shadow-warm">
+                {grupos.map(([categoria, lista]) => (
+                  <div key={categoria} className="mb-2 last:mb-0">
+                    <p className="px-1 pb-1 text-[10px] font-semibold tracking-wide text-neutro-500 uppercase">
+                      {categoria}
+                    </p>
+                    {lista.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => inserirTemplate(t)}
+                        className="block w-full rounded px-2 py-1.5 text-left text-sm text-neutro-900 hover:bg-neutro-50"
+                      >
+                        <span className="font-medium">{t.nome}</span>
+                        <span className="mt-0.5 block truncate text-xs text-neutro-700">
+                          {t.conteudo}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Paperclip / attach button */}
         <button

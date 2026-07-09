@@ -8,11 +8,14 @@ import {
   type ThreadResult,
 } from "@/lib/chat/queries";
 import { getFunilComEtapas } from "@/lib/funil/queries";
+import { listTemplatesAtivos } from "@/lib/chat/queries";
+import { preencherTemplate } from "@/lib/whatsapp/templates";
 import { listVagasDistintas } from "@/lib/candidatos/queries";
 import { listarResponsaveis } from "@/app/(app)/candidatos/actions";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { MessageThread } from "@/components/chat/message-thread";
+import type { TemplatePronto } from "@/components/chat/composer";
 import { CandidatePanel } from "@/components/chat/candidate-panel";
 import { ChatRealtime } from "@/components/chat/realtime";
 import { MarkRead } from "@/components/chat/mark-read";
@@ -29,8 +32,9 @@ export default async function ChatPage({
   if (!profile) redirect("/login");
   const canEdit = profile.platform_admin || profile.role === "admin" || profile.role === "rh";
 
-  const { c } = await searchParams;
+  const { c, tpl } = await searchParams;
   const activeConversationId = typeof c === "string" ? c : null;
+  const tplCategoria = typeof tpl === "string" ? tpl : null;
 
   const supabase = await createClient();
   const [empresaId, conversations, funil, vagas, responsaveis, unidadesRes] = await Promise.all([
@@ -61,6 +65,34 @@ export default async function ChatPage({
     activeCandidato = candidato;
   }
 
+  // Templates ativos com variáveis JÁ resolvidas para o candidato ativo (SP6).
+  const templatesAtivos = await listTemplatesAtivos();
+  let unidadeNome: string | null = null;
+  if (activeCandidato?.unidade_id) {
+    const { data: unidadeRow } = await supabase
+      .from("unidades")
+      .select("nome")
+      .eq("id", activeCandidato.unidade_id)
+      .maybeSingle();
+    unidadeNome = unidadeRow?.nome ?? null;
+  }
+  const dadosCandidato = {
+    nome: activeCandidato?.nome ?? null,
+    vaga: activeCandidato?.vaga_interesse ?? null,
+    unidade: unidadeNome,
+  };
+  const templatesProntos: TemplatePronto[] = templatesAtivos.map((t) => ({
+    id: t.id,
+    nome: t.nome,
+    categoria: t.categoria ?? "geral",
+    conteudo: preencherTemplate(t.conteudo, dadosCandidato),
+  }));
+  // Sem template da categoria pedida → sem prefill (composer vazio, sem erro).
+  const prefill =
+    tplCategoria && activeCandidato
+      ? (templatesProntos.find((t) => t.categoria === tplCategoria)?.conteudo ?? null)
+      : null;
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Column 1 — Conversation list (280px) */}
@@ -81,6 +113,8 @@ export default async function ChatPage({
             messages={thread.messages}
             hasMore={thread.hasMore}
             conversationId={displayedConvId}
+            prefill={prefill}
+            templates={templatesProntos}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-neutro-700">

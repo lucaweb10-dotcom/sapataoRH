@@ -8,13 +8,15 @@ import type { MessageStatus } from "@/types/database";
 import type { MessageWithSignedUrl } from "@/lib/chat/queries";
 import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
-import { Composer } from "./composer";
+import { Composer, type TemplatePronto } from "./composer";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
 
 interface Props {
   messages: MessageWithSignedUrl[];
   hasMore: boolean;
   conversationId: string;
+  prefill: string | null;
+  templates: TemplatePronto[];
 }
 
 function formatTime(dateStr: string): string {
@@ -282,7 +284,7 @@ function groupByDate(items: DisplayedMessage[]): { date: string; items: Displaye
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function MessageThread({ messages, hasMore, conversationId }: Props) {
+export function MessageThread({ messages, hasMore, conversationId, prefill, templates }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Zustand store selectors
@@ -501,7 +503,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
       </div>
 
       {/* Composer */}
-      <Composer conversationId={conversationId} />
+      <Composer conversationId={conversationId} prefill={prefill} templates={templates} />
     </div>
   );
 }
