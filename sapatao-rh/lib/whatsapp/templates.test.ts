@@ -48,4 +48,8 @@ describe("preencherTemplate", () => {
     const r = preencherTemplate("Olá {{nome}}!\nVaga: {{vaga}}\nAté já.", { nome: "Ana" });
     expect(r).toBe("Olá Ana!\nVaga:\nAté já.");
   });
+
+  it("remove placeholders malformados ({{123}}, {{}}, {{a b}})", () => {
+    expect(preencherTemplate("Oi {{123}} tudo {{}} bem {{a b}}?", {})).toBe("Oi tudo bem?");
+  });
 });

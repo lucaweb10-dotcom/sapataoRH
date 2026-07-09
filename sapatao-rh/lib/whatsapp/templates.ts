@@ -28,6 +28,7 @@ export function preencherTemplate(conteudo: string, dados: DadosTemplate): strin
   };
   return conteudo
     .replace(PLACEHOLDER, (_m, chave: string) => valores[chave.toLowerCase()] ?? "")
+    .replace(/\{\{[^{}]*\}\}/g, "") // remove placeholders malformados ({{123}}, {{}}, {{a b}}, etc)
     .replace(/[ \t]{2,}/g, " ") // espaços duplos deixados por variáveis vazias
     .replace(/ ([,.!?;:])/g, "$1") // espaço órfão antes de pontuação
     .replace(/^[ \t]+|[ \t]+$/gm, ""); // sobras nas bordas de cada linha
