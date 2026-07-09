@@ -5,7 +5,7 @@ import { signedMediaUrls } from "./signed-url";
 
 // Conversations with embedded candidato data (PostgREST embed)
 export type ConversationWithCandidato = Conversation & {
-  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone"> | null;
+  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone" | "atribuido_a"> | null;
 };
 
 export type MessageWithSignedUrl = Message & { midia_signed_url: string | null };
@@ -21,7 +21,7 @@ export async function listConversations(): Promise<ConversationWithCandidato[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("conversations")
-    .select("*, candidatos(nome, avatar_url, tags, telefone)")
+    .select("*, candidatos(nome, avatar_url, tags, telefone, atribuido_a)")
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
   if (error) {

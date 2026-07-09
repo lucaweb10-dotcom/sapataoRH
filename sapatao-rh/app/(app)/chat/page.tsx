@@ -102,6 +102,7 @@ export default async function ChatPage({
           activeId={displayedConvId}
           vagas={vagas}
           unidades={unidades}
+          currentUserId={profile.id}
         />
       </div>
 
