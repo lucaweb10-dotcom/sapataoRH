@@ -1,4 +1,4 @@
-export const PAGE_SIZE = 25;
+export const PAGE_SIZE = 30;
 
 /** Inclusive row range for a 1-based page, for supabase `.range(from, to)`. */
 export function rangeDaPagina(page: number, pageSize = PAGE_SIZE): { from: number; to: number } {
