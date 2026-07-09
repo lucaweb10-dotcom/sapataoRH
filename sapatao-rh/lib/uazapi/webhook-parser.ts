@@ -53,6 +53,31 @@ function mimeFromContent(m: Obj): string | null {
   return null;
 }
 
+// Payload real (whatsmeow via UAZAPI): para MÍDIA, os campos normalizados `type`/`mediaType`
+// vêm VAZIOS e o tipo real fica em `messageType` com o nome BRUTO do WhatsApp
+// ("AudioMessage", "ImageMessage", ...). Mapear para o nosso enum, senão a mídia era
+// classificada como "text" e o download nunca disparava.
+const RAW_TIPO: Record<string, string> = {
+  conversation: "text",
+  extendedtextmessage: "text",
+  imagemessage: "image",
+  videomessage: "video",
+  audiomessage: "audio",
+  pttmessage: "ptt",
+  voicemessage: "ptt",
+  documentmessage: "document",
+  documentwithcaptionmessage: "document",
+  stickermessage: "sticker",
+};
+
+/** Resolve o tipo da mensagem: prefere os campos normalizados; se vazios, mapeia o nome bruto. */
+function tipoFromMessage(m: Obj): string {
+  const norm = (str(m["type"]) ?? str(m["mediaType"]) ?? "").toLowerCase();
+  if (norm) return RAW_TIPO[norm] ?? norm;
+  const raw = (str(m["messageType"]) ?? "").toLowerCase();
+  return RAW_TIPO[raw] ?? "text";
+}
+
 export function parseUazapiEvent(raw: unknown): UazapiEvent {
   const p = asObj(raw);
   const event = str(p["event"]) ?? str(p["EventType"]);
@@ -100,10 +125,9 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
       kind: "message",
       instanceId,
       direction: fromMe ? "outbound" : "inbound",
-      // Payload real: `messageType` é o tipo bruto do WA ("Conversation", "ImageMessage");
-      // os campos normalizados são `type`/`mediaType` ("text", "image", ...).
-      messageType:
-        str(m["type"]) ?? str(m["mediaType"]) ?? str(m["messageType"]) ?? "text",
+      // Payload real: `messageType` é o tipo bruto do WA ("Conversation", "AudioMessage");
+      // para mídia `type`/`mediaType` vêm vazios — ver tipoFromMessage.
+      messageType: tipoFromMessage(m),
       content: str(m["text"]) ?? str(m["conteudo"]) ?? str(m["body"]) ?? "",
       phone: normalizePhone(str(m["chatid"]) ?? str(m["phone"]) ?? ""),
       providerMessageId: id,

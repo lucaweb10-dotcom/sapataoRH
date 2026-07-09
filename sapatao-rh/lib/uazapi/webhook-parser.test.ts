@@ -183,5 +183,45 @@ describe("payload real UAZAPI (capturado ao vivo)", () => {
     });
     expect(e).toEqual({ kind: "status", providerMessageId: "3AA0F9715FA2C18F5C94", status: "read" });
   });
+  it("AUDIO real (AudioMessage): type/mediaType vazios, tipo vem do messageType bruto", () => {
+    const e = parseUazapiEvent({
+      EventType: "messages", instanceName: "f360_11111111_7710c6c1",
+      chat: { wa_chatid: "555195476769@s.whatsapp.net", wa_name: "Fulano", name: "Fulano" },
+      message: {
+        messageid: "3A314C3A93E914018446", chatid: "555195476769@s.whatsapp.net",
+        fromMe: false, isGroup: false, messageType: "AudioMessage", type: "", mediaType: "",
+        mimetype: "", senderName: "Fulano",
+        content: { PTT: true, mimetype: "audio/ogg; codecs=opus", seconds: 9 },
+      },
+    });
+    expect(e.kind).toBe("message");
+    if (e.kind === "message") {
+      expect(e.messageType).toBe("audio");
+      expect(e.mediaMime).toBe("audio/ogg; codecs=opus");
+      expect(e.phone).toBe("555195476769");
+    }
+  });
+
+  it("IMAGEM/VIDEO/DOCUMENTO/STICKER reais viram os tipos do nosso enum", () => {
+    const base = (mt: string) => ({
+      EventType: "messages",
+      message: { messageid: "X" + mt, chatid: "5551999@s.whatsapp.net", fromMe: false, isGroup: false, messageType: mt, type: "", mediaType: "" },
+    });
+    const tipo = (mt: string) => { const e = parseUazapiEvent(base(mt)); return e.kind === "message" ? e.messageType : e.kind; };
+    expect(tipo("ImageMessage")).toBe("image");
+    expect(tipo("VideoMessage")).toBe("video");
+    expect(tipo("DocumentMessage")).toBe("document");
+    expect(tipo("DocumentWithCaptionMessage")).toBe("document");
+    expect(tipo("StickerMessage")).toBe("sticker");
+  });
+
+  it("IMAGEM com legenda: text preenchido vira content, tipo continua image", () => {
+    const e = parseUazapiEvent({
+      EventType: "messages",
+      message: { messageid: "IMG1", chatid: "5551999@s.whatsapp.net", fromMe: false, isGroup: false, messageType: "ImageMessage", type: "", mediaType: "", text: "olha essa foto", content: { mimetype: "image/jpeg" } },
+    });
+    if (e.kind === "message") { expect(e.messageType).toBe("image"); expect(e.content).toBe("olha essa foto"); }
+  });
 });
+
 

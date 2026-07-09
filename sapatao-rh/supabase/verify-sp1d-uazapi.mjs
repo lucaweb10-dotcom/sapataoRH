@@ -19,6 +19,18 @@ let pass = 0, fail = 0;
 const ok = (name, cond) => (cond ? (pass++, console.log("  ✔", name)) : (fail++, console.error("  ✘", name)));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// O E2E sobrescreve a linha da instância (upsert onConflict empresa_id) — salvar antes
+// e restaurar depois, senão o teste derruba a integração UAZAPI ao vivo (credenciais reais).
+const RESTORE_COLS =
+  "uazapi_instance_id, uazapi_token, uazapi_base_url, uazapi_admin_token, webhook_secret, status, phone_number, nome, connected_at, last_seen_at";
+let savedInstance = null, savedEmpresaId = null;
+async function restaurarInstancia() {
+  if (savedEmpresaId && savedInstance) {
+    await admin.from("whatsapp_instances").update(savedInstance).eq("empresa_id", savedEmpresaId);
+    console.log("instância real restaurada.");
+  }
+}
+
 // ── gateway falso (só o que o webhook dispara: download de mídia) ────────────
 const hits = [];
 const gateway = createServer((req, res) => {
@@ -40,6 +52,12 @@ const GATEWAY = `http://127.0.0.1:${gateway.address().port}`;
 
 async function main() {
   const { data: empresa } = await admin.from("empresas").select("id").eq("slug", "estacao-sapatao").single();
+
+  // Salva a instância real ANTES de sobrescrever (restaurada no finally).
+  savedEmpresaId = empresa.id;
+  const { data: sInst } = await admin
+    .from("whatsapp_instances").select(RESTORE_COLS).eq("empresa_id", empresa.id).maybeSingle();
+  savedInstance = sInst;
 
   // Instância de teste apontando para o gateway falso
   const instanceId = `e2e-${randomUUID().slice(0, 8)}`;
@@ -140,7 +158,15 @@ async function main() {
   ok("retenção = 50 (prune)", retCount === 50);
 
   console.log(`\n${pass} ok, ${fail} falhas`);
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 }
 
-main().finally(() => gateway.close());
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await restaurarInstancia();
+    gateway.close();
+  });
