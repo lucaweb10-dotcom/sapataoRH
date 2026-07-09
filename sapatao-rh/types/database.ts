@@ -53,11 +53,23 @@ export type WhatsappInstance = Timestamps & {
   nome: string;
   uazapi_instance_id: string | null;
   uazapi_token: string | null;
+  uazapi_base_url: string | null;
+  uazapi_admin_token: string | null;
+  webhook_public_url: string | null;
   webhook_secret: string;
   status: WhatsappStatus;
   phone_number: string | null;
   connected_at: string | null;
   last_seen_at: string | null;
+}
+
+export type WhatsappWebhookEvent = {
+  id: string;
+  empresa_id: string;
+  event: string | null;
+  parsed_kind: string;
+  payload: Record<string, unknown>;
+  created_at: string;
 }
 
 export type Candidato = Timestamps & {
@@ -240,6 +252,12 @@ export interface Database {
         Row: WhatsappInstance;
         Insert: Partial<WhatsappInstance> & { empresa_id: string };
         Update: Partial<WhatsappInstance>;
+        Relationships: [];
+      };
+      whatsapp_webhook_events: {
+        Row: WhatsappWebhookEvent;
+        Insert: Partial<WhatsappWebhookEvent> & { empresa_id: string; payload: Record<string, unknown> };
+        Update: Partial<WhatsappWebhookEvent>;
         Relationships: [];
       };
       candidatos: {
