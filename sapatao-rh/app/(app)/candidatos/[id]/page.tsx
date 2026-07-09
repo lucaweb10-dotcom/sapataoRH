@@ -11,7 +11,8 @@ import { TempoChip } from "@/components/candidatos/tempo-chip";
 import { ParecerView } from "@/components/cv/parecer-view";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilComEtapas, getHistorico } from "@/lib/funil/queries";
-import { getCandidatoFicha, getEntrevistaVigente } from "@/lib/candidatos/queries";
+import { getCandidatoFicha, getEntrevistaVigente, listVagasDistintas } from "@/lib/candidatos/queries";
+import { listarResponsaveis } from "@/app/(app)/candidatos/actions";
 import type { Entrevista } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -53,11 +54,13 @@ export default async function CandidatoFichaPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [candidato, funil, historico, entrevista] = await Promise.all([
+  const [candidato, funil, historico, entrevista, vagas, responsaveis] = await Promise.all([
     getCandidatoFicha(id),
     getFunilComEtapas(),
     getHistorico(id),
     getEntrevistaVigente(id) as Promise<Entrevista | null>,
+    listVagasDistintas(),
+    listarResponsaveis(),
   ]);
   if (!candidato) notFound();
 
@@ -116,6 +119,9 @@ export default async function CandidatoFichaPage({
           etapas={etapas}
           canEdit={canEdit}
           temEntrevista={!!entrevista}
+          candidato={candidato}
+          vagas={vagas}
+          responsaveis={responsaveis}
         />
       </div>
 

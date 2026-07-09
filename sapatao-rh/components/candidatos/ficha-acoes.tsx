@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/select";
 import { AgendarDialog } from "@/components/funil/agendar-dialog";
 import { ConfirmMoveDialog } from "@/components/funil/confirm-move-dialog";
+import {
+  EditarCandidatoDialog,
+  type CandidatoEditavel,
+} from "@/components/candidatos/editar-candidato-dialog";
 import { moverCandidatoAction } from "@/app/(app)/funil/actions";
+import type { Responsavel } from "@/app/(app)/candidatos/actions";
 import type { FunilEtapa } from "@/types/database";
 
 /** Action row of the ficha: abrir conversa, mover etapa (with confirmation on
@@ -28,6 +33,9 @@ export function FichaAcoes({
   etapas,
   canEdit,
   temEntrevista,
+  candidato,
+  vagas,
+  responsaveis,
 }: {
   candidatoId: string;
   nome: string;
@@ -36,6 +44,9 @@ export function FichaAcoes({
   etapas: FunilEtapa[];
   canEdit: boolean;
   temEntrevista: boolean;
+  candidato: CandidatoEditavel;
+  vagas: string[];
+  responsaveis: Responsavel[];
 }) {
   const router = useRouter();
   const [agendarOpen, setAgendarOpen] = useState(false);
@@ -77,6 +88,15 @@ export function FichaAcoes({
         <MessagesSquare className="size-3.5" />
         Abrir conversa
       </Button>
+
+      {canEdit && (
+        <EditarCandidatoDialog
+          candidato={candidato}
+          temConversa={!!conversationId}
+          vagas={vagas}
+          responsaveis={responsaveis}
+        />
+      )}
 
       {canEdit && (
         <Select value={null} onValueChange={(v: string | null) => { if (v) onMover(v); }}>
