@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -11,6 +12,10 @@ import {
   registerWebhook,
 } from "@/lib/uazapi/client";
 import { getUazapiConfig } from "@/lib/uazapi/config";
+import {
+  credenciaisUazapiSchema,
+  webhookPublicoSchema,
+} from "@/lib/validations/whatsapp";
 import type { WhatsappInstance } from "@/types/database";
 
 // ─── Guard helpers ────────────────────────────────────────────────────────────
@@ -109,7 +114,12 @@ export async function conectar(): Promise<{ qr?: string | null; error?: string }
   const { qr } = await connectInstance(cfg.baseUrl, uazapiToken);
 
   // Register webhook so UAZAPI can push events back
-  const baseUrl = await getBaseUrl();
+  const { data: rowUrl } = await admin
+    .from("whatsapp_instances")
+    .select("webhook_public_url")
+    .eq("empresa_id", profile.empresa_id)
+    .maybeSingle();
+  const baseUrl = rowUrl?.webhook_public_url ?? (await getBaseUrl());
   await registerWebhook(
     cfg.baseUrl,
     uazapiToken,
@@ -210,6 +220,93 @@ export async function desconectar(): Promise<{ ok?: boolean; error?: string }> {
     .eq("empresa_id", profile.empresa_id);
 
   return { ok: true };
+}
+
+/**
+ * Salva as credenciais UAZAPI da empresa (upsert da linha da instância).
+ * O token NUNCA volta para o cliente.
+ */
+export async function salvarCredenciais(input: {
+  baseUrl: string;
+  adminToken: string | null;
+}): Promise<{ ok?: true; error?: string }> {
+  const guard = await requireAdmin();
+  if (isGuardError(guard)) return { error: guard.error };
+  const { profile } = guard;
+
+  const parsed = credenciaisUazapiSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalido" };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("whatsapp_instances")
+    .select("id")
+    .eq("empresa_id", profile.empresa_id)
+    .maybeSingle();
+
+  // adminToken null = manter o token já salvo (só permitido em update)
+  if (!existing && !parsed.data.adminToken) return { error: "token_obrigatorio" };
+
+  const fields: Partial<WhatsappInstance> = { uazapi_base_url: parsed.data.baseUrl };
+  if (parsed.data.adminToken) fields.uazapi_admin_token = parsed.data.adminToken;
+
+  const { error } = existing
+    ? await admin.from("whatsapp_instances").update(fields).eq("id", existing.id)
+    : await admin.from("whatsapp_instances").insert({
+        empresa_id: profile.empresa_id,
+        nome: "WhatsApp RH",
+        ...fields,
+      });
+  if (error) return { error: "db_error" };
+
+  revalidatePath("/configuracoes/whatsapp");
+  return { ok: true };
+}
+
+/**
+ * Salva a URL pública (túnel/domínio) e registra o webhook na UAZAPI.
+ * registered=false quando a instância ainda não foi provisionada (sem token).
+ */
+export async function salvarWebhookPublico(input: {
+  url: string;
+}): Promise<{ ok?: true; registered: boolean; webhookUrl?: string; error?: string }> {
+  const guard = await requireAdmin();
+  if (isGuardError(guard)) return { error: guard.error, registered: false };
+  const { profile } = guard;
+
+  const parsed = webhookPublicoSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalido", registered: false };
+
+  const admin = createAdminClient();
+  const { data: row, error } = await admin
+    .from("whatsapp_instances")
+    .select("id, uazapi_instance_id, uazapi_token, webhook_secret")
+    .eq("empresa_id", profile.empresa_id)
+    .maybeSingle();
+  if (error || !row) return { error: "sem_instancia", registered: false };
+
+  await admin
+    .from("whatsapp_instances")
+    .update({ webhook_public_url: parsed.data.url })
+    .eq("id", row.id);
+
+  if (!row.uazapi_instance_id || !row.uazapi_token) {
+    revalidatePath("/configuracoes/whatsapp");
+    return { ok: true, registered: false };
+  }
+
+  const cfg = await getUazapiConfig(admin, profile.empresa_id);
+  if (!cfg) return { error: "uazapi_nao_configurada", registered: false };
+
+  const webhookUrl = `${parsed.data.url}/api/whatsapp/webhook/${row.uazapi_instance_id}?secret=${row.webhook_secret}`;
+  try {
+    await registerWebhook(cfg.baseUrl, row.uazapi_token, webhookUrl);
+  } catch {
+    return { error: "registro_falhou", registered: false };
+  }
+
+  revalidatePath("/configuracoes/whatsapp");
+  return { ok: true, registered: true, webhookUrl };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

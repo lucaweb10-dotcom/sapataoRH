@@ -27,3 +27,19 @@ export const sendMediaSchema = z.object({
   caption: z.string().optional(),
 });
 export type SendMediaInputDTO = z.infer<typeof sendMediaSchema>;
+
+const urlLimpa = z
+  .string()
+  .trim()
+  .pipe(z.url({ error: "URL inválida" }))
+  .transform((u) => u.replace(/\/+$/, ""));
+
+export const credenciaisUazapiSchema = z.object({
+  baseUrl: urlLimpa,
+  // null = manter o admin token já salvo (update parcial)
+  adminToken: z.string().trim().min(8, "Token muito curto").nullable(),
+});
+export type CredenciaisUazapiInput = z.infer<typeof credenciaisUazapiSchema>;
+
+export const webhookPublicoSchema = z.object({ url: urlLimpa });
+export type WebhookPublicoInput = z.infer<typeof webhookPublicoSchema>;
