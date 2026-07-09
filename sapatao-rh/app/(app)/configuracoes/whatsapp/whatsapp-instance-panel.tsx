@@ -37,6 +37,7 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
   const [status, setStatus] = useState<WhatsappStatus>(initialStatus);
   const [phone, setPhone] = useState<string | null>(initialPhone);
   const [qr, setQr] = useState<string | null>(null);
+  const [paircode, setPaircode] = useState<string | null>(null);
   const [uazapiMissing, setUazapiMissing] = useState(false);
   const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -55,14 +56,15 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
     const newStatus = (result.status ?? "desconectado") as WhatsappStatus;
     setStatus(newStatus);
     if (result.phone) setPhone(result.phone);
+    // QR é RENOVADO pelo gateway a cada consulta — atualiza a imagem enquanto aguarda.
+    if (result.qr && newStatus !== "conectado") setQr(result.qr);
+    setPaircode(newStatus === "conectado" ? null : (result.paircode ?? null));
 
-    // Stop polling and clear QR once connected
     if (newStatus === "conectado") {
       setQr(null);
       stopPolling();
       toast.success("WhatsApp conectado com sucesso!");
     }
-    // Stop polling if disconnected (something went wrong)
     if (newStatus === "desconectado") {
       setQr(null);
       stopPolling();
@@ -86,7 +88,7 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
     setUazapiMissing(false);
     try {
       const result = await conectar();
-      if (result.error === "uazapi_nao_configurada") {
+      if (result.error === "uazapi_nao_configurada" || result.error === "uazapi_sem_admin_token") {
         setUazapiMissing(true);
         return;
       }
@@ -128,9 +130,8 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
       <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-6 text-center space-y-2">
         <p className="font-semibold text-neutro-900">UAZAPI não configurada</p>
         <p className="text-sm text-neutro-600">
-          Defina <code className="bg-neutro-100 px-1 rounded">UAZAPI_API_URL</code> e{" "}
-          <code className="bg-neutro-100 px-1 rounded">UAZAPI_ADMIN_TOKEN</code> no ambiente do
-          servidor e reinicie a aplicação.
+          Salve a URL do servidor e o admin token no bloco “Credenciais UAZAPI” acima
+          e tente conectar novamente.
         </p>
         <Button
           variant="outline"
@@ -169,6 +170,13 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
           />
           <p className="text-xs text-neutro-500">Verificando conexão automaticamente...</p>
         </div>
+      )}
+
+      {paircode && (
+        <p className="text-center text-sm text-neutro-600">
+          Ou use o código de pareamento:{" "}
+          <code className="bg-neutro-100 px-1.5 py-0.5 rounded font-semibold">{paircode}</code>
+        </p>
       )}
 
       {/* Action buttons */}
