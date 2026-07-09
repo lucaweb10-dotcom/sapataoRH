@@ -10,7 +10,7 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
   if (m) process.env[m[1]] ??= m[2].trim();
 }
 
-const APP = "http://localhost:3000";
+const APP = process.env.APP_URL ?? "http://localhost:3000";
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
