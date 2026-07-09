@@ -80,17 +80,27 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
     const m = asObj(p["message"]);
     const id = extractMessageId(m);
     if (!id) return { kind: "ignore" };
+    // Payload real (capturado ao vivo): grupos chegam com isGroup=true e chatid @g.us.
+    // Grupo não é candidato — ignorar para não criar registros com telefone inválido.
+    if (m["isGroup"] === true || (str(m["chatid"]) ?? "").includes("@g.us")) {
+      return { kind: "ignore" };
+    }
+    // Payload real: `chat` (com wa_name/wa_contactName/name) é irmão de `message` no topo.
     const chat = asObj(m["chat"]);
+    const topChat = asObj(p["chat"]);
     const fromMe = m["fromMe"] === true;
     return {
       kind: "message",
       instanceId,
       direction: fromMe ? "outbound" : "inbound",
-      messageType: str(m["messageType"]) ?? "text",
+      // Payload real: `messageType` é o tipo bruto do WA ("Conversation", "ImageMessage");
+      // os campos normalizados são `type`/`mediaType` ("text", "image", ...).
+      messageType:
+        str(m["type"]) ?? str(m["mediaType"]) ?? str(m["messageType"]) ?? "text",
       content: str(m["text"]) ?? str(m["conteudo"]) ?? str(m["body"]) ?? "",
       phone: normalizePhone(str(m["chatid"]) ?? str(m["phone"]) ?? ""),
       providerMessageId: id,
-      contactName: contactNameFromChat(chat),
+      contactName: contactNameFromChat(chat) ?? contactNameFromChat(topChat),
       senderName: str(m["senderName"]),
       wasSentByApi: m["wasSentByApi"] === true,
       mediaMime: str(m["mimetype"]) ?? str(m["mime"]) ?? mimeFromContent(m),
