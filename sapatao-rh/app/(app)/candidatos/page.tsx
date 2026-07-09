@@ -4,13 +4,15 @@ import { Users } from "lucide-react";
 import { PageContainer } from "@/components/shell/page-container";
 import { Button } from "@/components/ui/button";
 import { FiltrosBar } from "@/components/candidatos/filtros-bar";
+import { NovoCandidatoDialog } from "@/components/candidatos/novo-candidato-dialog";
 import { CandidatosTabela, type EtapaInfo } from "@/components/candidatos/tabela";
 import { PaginacaoNav } from "@/components/candidatos/paginacao-nav";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilComEtapas } from "@/lib/funil/queries";
 import { parseFiltros } from "@/lib/candidatos/filtros";
-import { listCandidatos } from "@/lib/candidatos/queries";
+import { listCandidatos, listVagasDistintas } from "@/lib/candidatos/queries";
 import { totalPaginas, resumoPaginacao } from "@/lib/candidatos/paginacao";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,15 @@ export default async function CandidatosPage({
   const sp = await searchParams;
   const filtros = parseFiltros(sp);
 
-  const [funil, lista] = await Promise.all([getFunilComEtapas(), listCandidatos(filtros)]);
+  const supabase = await createClient();
+  const [funil, lista, vagas, unidadesRes] = await Promise.all([
+    getFunilComEtapas(),
+    listCandidatos(filtros),
+    listVagasDistintas(),
+    supabase.from("unidades").select("id, nome").eq("ativa", true).order("nome"),
+  ]);
+  const unidades = (unidadesRes.data ?? []) as { id: string; nome: string }[];
+  const canCreate = profile.platform_admin || profile.role === "admin" || profile.role === "rh";
   const etapas = funil?.etapas ?? [];
   const etapasById: Record<string, EtapaInfo> = {};
   for (const e of etapas) etapasById[e.id] = { nome: e.nome, cor: e.cor };
@@ -35,11 +45,14 @@ export default async function CandidatosPage({
 
   return (
     <PageContainer>
-      <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">Candidatos</h1>
-        <p className="text-sm text-neutro-700">
-          Base completa de quem já se candidatou — inclui contratados, reprovados e desistentes.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="font-display text-2xl font-bold">Candidatos</h1>
+          <p className="text-sm text-neutro-700">
+            Base completa de quem já se candidatou — inclui contratados, reprovados e desistentes.
+          </p>
+        </div>
+        {canCreate && <NovoCandidatoDialog vagas={vagas} unidades={unidades} aoCriar="ficha" />}
       </div>
 
       <div className="mt-6 space-y-4">
