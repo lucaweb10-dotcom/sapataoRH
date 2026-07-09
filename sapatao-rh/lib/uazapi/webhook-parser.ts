@@ -70,8 +70,15 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
   }
 
   if (event === "messages_update" || (p["status"] && p["messageid"] && !p["message"])) {
-    const id = extractMessageId(p);
-    const status = normalizeStatus(p["status"]);
+    // Payload real (capturado ao vivo): recibo whatsmeow — ids em event.MessageIDs[],
+    // status em `state` (topo) ou event.Type ("Read"/"Delivered").
+    const ev = asObj(p["event"]);
+    const messageIds = Array.isArray(ev["MessageIDs"])
+      ? (ev["MessageIDs"] as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+    const id = extractMessageId(p) ?? messageIds[0] ?? null;
+    const status =
+      normalizeStatus(p["status"]) ?? normalizeStatus(p["state"]) ?? normalizeStatus(ev["Type"]);
     if (id && status) return { kind: "status", providerMessageId: id, status };
     return { kind: "ignore" };
   }

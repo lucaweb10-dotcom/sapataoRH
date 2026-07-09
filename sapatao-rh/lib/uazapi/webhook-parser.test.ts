@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import { parseUazapiEvent } from "./webhook-parser";
 
 const inbound = {
@@ -168,4 +168,20 @@ describe("payload real UAZAPI (capturado ao vivo)", () => {
     const e = parseUazapiEvent(media);
     if (e.kind === "message") expect(e.messageType).toBe("image");
   });
+  it("messages_update real (recibo whatsmeow): MessageIDs + state", () => {
+    const e = parseUazapiEvent({
+      EventType: "messages_update",
+      type: "ReadReceipt",
+      state: "Read",
+      event: {
+        Chat: "555198662662@s.whatsapp.net", chatid: "555198662662@s.whatsapp.net",
+        Type: "Read", Sender: "555181899843@s.whatsapp.net", IsFromMe: true,
+        Timestamp: 1783618042, MessageIDs: ["3AA0F9715FA2C18F5C94"],
+      },
+      owner: "555181899843", instanceName: "f360_11111111_7710c6c1",
+      BaseUrl: "https://first360.uazapi.com",
+    });
+    expect(e).toEqual({ kind: "status", providerMessageId: "3AA0F9715FA2C18F5C94", status: "read" });
+  });
 });
+
