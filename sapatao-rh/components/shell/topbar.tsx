@@ -32,7 +32,14 @@ export function Topbar({ profile, unidades }: { profile: Profile; unidades: Unid
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutro-200 bg-card px-4 shadow-warm">
-      <Select value={unidadeId} onValueChange={onUnidade}>
+      <Select
+        value={unidadeId}
+        onValueChange={onUnidade}
+        items={{
+          [TODAS]: "Todas as unidades",
+          ...Object.fromEntries(unidades.map((u) => [u.id, u.nome])),
+        }}
+      >
         <SelectTrigger className="w-56">
           <SelectValue placeholder="Unidade" />
         </SelectTrigger>

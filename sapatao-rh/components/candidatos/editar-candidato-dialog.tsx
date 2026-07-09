@@ -191,6 +191,7 @@ export function EditarCandidatoDialog({
                 <Select
                   value={temVeiculo}
                   onValueChange={(v: string | null) => setTemVeiculo((v as Veiculo) ?? "nd")}
+                  items={{ nd: "Não informado", sim: "Sim", nao: "Não" }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -207,6 +208,10 @@ export function EditarCandidatoDialog({
                 <Select
                   value={atribuidoA}
                   onValueChange={(v: string | null) => setAtribuidoA(v ?? NINGUEM)}
+                  items={{
+                    [NINGUEM]: "Ninguém",
+                    ...Object.fromEntries(responsaveis.map((r) => [r.id, r.nome])),
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />

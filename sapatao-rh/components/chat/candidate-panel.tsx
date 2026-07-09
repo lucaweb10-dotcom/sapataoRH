@@ -149,7 +149,11 @@ export function CandidatePanel({ candidato, etapas, vagas, responsaveis, canEdit
           <div>
             <p className="mb-1.5 text-xs font-medium text-neutro-700">Etapa do funil</p>
             {canEdit ? (
-              <Select value={candidato.etapa_id} onValueChange={onMover}>
+              <Select
+                value={candidato.etapa_id}
+                onValueChange={onMover}
+                items={Object.fromEntries(etapas.map((e) => [e.id, e.nome]))}
+              >
                 <SelectTrigger size="sm" className="w-full" disabled={pending}>
                   <SelectValue placeholder="Sem etapa" />
                 </SelectTrigger>
@@ -209,6 +213,10 @@ export function CandidatePanel({ candidato, etapas, vagas, responsaveis, canEdit
                   "Responsável atualizado.",
                 )
               }
+              items={{
+                [NINGUEM]: "Ninguém",
+                ...Object.fromEntries(responsaveis.map((r) => [r.id, r.nome])),
+              }}
             >
               <SelectTrigger size="sm" className="w-full" disabled={pending}>
                 <SelectValue />

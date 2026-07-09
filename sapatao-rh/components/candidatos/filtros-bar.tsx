@@ -84,7 +84,11 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
         />
       </div>
 
-      <Select value={status} onValueChange={(v: string | null) => aplicar({ status: v })}>
+      <Select
+        value={status}
+        onValueChange={(v: string | null) => aplicar({ status: v })}
+        items={{ [TODOS]: "Todos os status", ...STATUS_LABEL }}
+      >
         <SelectTrigger size="sm" aria-label="Filtrar por status">
           <SelectValue />
         </SelectTrigger>
@@ -99,7 +103,14 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
       </Select>
 
       {etapas.length > 0 && (
-        <Select value={etapa} onValueChange={(v: string | null) => aplicar({ etapa: v })}>
+        <Select
+          value={etapa}
+          onValueChange={(v: string | null) => aplicar({ etapa: v })}
+          items={{
+            [TODOS]: "Todas as etapas",
+            ...Object.fromEntries(etapas.map((e) => [e.id, e.nome])),
+          }}
+        >
           <SelectTrigger size="sm" aria-label="Filtrar por etapa">
             <SelectValue />
           </SelectTrigger>

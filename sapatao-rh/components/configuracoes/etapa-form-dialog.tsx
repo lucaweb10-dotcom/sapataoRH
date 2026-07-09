@@ -147,6 +147,7 @@ export function EtapaFormDialog({ funilId, etapa }: { funilId: string; etapa?: F
                 <Select
                   value={statusDestino}
                   onValueChange={(v: string | null) => setStatusDestino((v as StatusDestino) ?? null)}
+                  items={{ contratado: "Contratado", reprovado: "Reprovado", desistente: "Desistente" }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione o status" />

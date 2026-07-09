@@ -179,6 +179,7 @@ export function NovoCandidatoDialog({
                 <Select
                   value={origem}
                   onValueChange={(v: string | null) => setOrigem((v as Origem) ?? "outro")}
+                  items={ORIGEM_LABEL}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -200,6 +201,10 @@ export function NovoCandidatoDialog({
                     onValueChange={(v: string | null) =>
                       setUnidadeId(v === SEM_UNIDADE ? null : v)
                     }
+                    items={{
+                      [SEM_UNIDADE]: "Sem unidade",
+                      ...Object.fromEntries(unidades.map((u) => [u.id, u.nome])),
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />

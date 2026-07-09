@@ -82,7 +82,11 @@ export function FunilFiltros({
       </div>
 
       {vagas.length > 0 && (
-        <Select value={vaga} onValueChange={(v: string | null) => aplicar({ vaga: v })}>
+        <Select
+          value={vaga}
+          onValueChange={(v: string | null) => aplicar({ vaga: v })}
+          items={{ [TODOS]: "Todas as vagas", ...Object.fromEntries(vagas.map((v) => [v, v])) }}
+        >
           <SelectTrigger size="sm" aria-label="Filtrar por vaga">
             <SelectValue />
           </SelectTrigger>
@@ -97,7 +101,15 @@ export function FunilFiltros({
         </Select>
       )}
 
-      <Select value={resp} onValueChange={(v: string | null) => aplicar({ resp: v })}>
+      <Select
+        value={resp}
+        onValueChange={(v: string | null) => aplicar({ resp: v })}
+        items={{
+          [TODOS]: "Todos os responsáveis",
+          [MEUS]: "Meus",
+          ...Object.fromEntries(responsaveis.map((r) => [r.id, r.nome])),
+        }}
+      >
         <SelectTrigger size="sm" aria-label="Filtrar por responsável">
           <SelectValue />
         </SelectTrigger>
