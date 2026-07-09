@@ -10,6 +10,7 @@ import {
   disconnectInstance,
   registerWebhook,
 } from "@/lib/uazapi/client";
+import { getUazapiConfig } from "@/lib/uazapi/config";
 import type { WhatsappInstance } from "@/types/database";
 
 // ─── Guard helpers ────────────────────────────────────────────────────────────
@@ -32,13 +33,6 @@ function isGuardError(v: unknown): v is GuardError {
 
 // ─── Env checks ──────────────────────────────────────────────────────────────
 
-function getUazapiEnv(): { apiUrl: string; adminToken: string } | null {
-  const apiUrl = process.env.UAZAPI_API_URL;
-  const adminToken = process.env.UAZAPI_ADMIN_TOKEN;
-  if (!apiUrl || !adminToken) return null;
-  return { apiUrl, adminToken };
-}
-
 async function getBaseUrl(): Promise<string> {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   const h = await headers();
@@ -58,8 +52,10 @@ export async function conectar(): Promise<{ qr?: string | null; error?: string }
   if (isGuardError(guard)) return { error: guard.error };
   const { profile } = guard;
 
-  const env = getUazapiEnv();
-  if (!env) return { error: "uazapi_nao_configurada" };
+  const admin0 = createAdminClient();
+  const cfg = await getUazapiConfig(admin0, profile.empresa_id);
+  if (!cfg) return { error: "uazapi_nao_configurada" };
+  if (!cfg.adminToken) return { error: "uazapi_sem_admin_token" };
 
   const admin = createAdminClient();
 
@@ -82,7 +78,7 @@ export async function conectar(): Promise<{ qr?: string | null; error?: string }
   if (!uazapiInstanceId || !uazapiToken) {
     const slug = profile.empresa_id.slice(0, 8);
     const instanceName = `sapatao-${slug}`;
-    const created = await createInstance(env.adminToken, instanceName);
+    const created = await createInstance(cfg.baseUrl, cfg.adminToken, instanceName);
     uazapiInstanceId = created.instanceId;
     uazapiToken = created.token;
 
@@ -110,11 +106,12 @@ export async function conectar(): Promise<{ qr?: string | null; error?: string }
   }
 
   // Connect (generate QR)
-  const { qr } = await connectInstance(uazapiToken);
+  const { qr } = await connectInstance(cfg.baseUrl, uazapiToken);
 
   // Register webhook so UAZAPI can push events back
   const baseUrl = await getBaseUrl();
   await registerWebhook(
+    cfg.baseUrl,
     uazapiToken,
     `${baseUrl}/api/whatsapp/webhook/${uazapiInstanceId}?secret=${webhookSecret}`,
   ).catch(() => {
@@ -137,6 +134,8 @@ export async function conectar(): Promise<{ qr?: string | null; error?: string }
 export async function statusInstancia(): Promise<{
   status?: string;
   phone?: string | null;
+  qr?: string | null;
+  paircode?: string | null;
   error?: string;
 }> {
   const guard = await requireAdmin();
@@ -154,7 +153,13 @@ export async function statusInstancia(): Promise<{
     return { error: "sem_instancia" };
   }
 
-  const { status: rawStatus } = await instanceStatus(instanceRow.uazapi_token);
+  const cfg = await getUazapiConfig(admin, profile.empresa_id);
+  if (!cfg) return { error: "uazapi_nao_configurada" };
+
+  const { status: rawStatus, qr, paircode } = await instanceStatus(
+    cfg.baseUrl,
+    instanceRow.uazapi_token,
+  );
 
   // Normalize to our enum
   const normalized = normalizeInstanceStatus(rawStatus);
@@ -172,7 +177,7 @@ export async function statusInstancia(): Promise<{
       .eq("empresa_id", profile.empresa_id);
   }
 
-  return { status: normalized, phone: instanceRow.phone_number };
+  return { status: normalized, phone: instanceRow.phone_number, qr, paircode };
 }
 
 /**
@@ -191,9 +196,12 @@ export async function desconectar(): Promise<{ ok?: boolean; error?: string }> {
     .single<WhatsappInstance>();
 
   if (instanceRow?.uazapi_token) {
-    await disconnectInstance(instanceRow.uazapi_token).catch(() => {
-      // Best-effort — always proceed with local state cleanup
-    });
+    const cfg = await getUazapiConfig(admin, profile.empresa_id);
+    if (cfg) {
+      await disconnectInstance(cfg.baseUrl, instanceRow.uazapi_token).catch(() => {
+        // Best-effort — always proceed with local state cleanup
+      });
+    }
   }
 
   await admin

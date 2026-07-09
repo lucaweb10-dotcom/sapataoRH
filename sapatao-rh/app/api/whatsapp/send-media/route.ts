@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMediaSchema } from "@/lib/validations/whatsapp";
 import { enviarMidia, type SendMediaDeps } from "@/lib/whatsapp/send-media";
 import { sendMedia as uazapiSendMedia } from "@/lib/uazapi/client";
+import { getUazapiConfig } from "@/lib/uazapi/config";
 import { mimeToExt, tipoFromMime } from "@/lib/whatsapp/media-helpers";
 
 function canSend(role: string, platformAdmin: boolean): boolean {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const empresaId = profile.empresa_id;
+  const uazapiCfg = await getUazapiConfig(admin, empresaId);
   const midiaPath = `${empresaId}/out-${clientMessageId}.${mimeToExt(mime)}`;
 
   // Upload to the bucket (for our own display via signed URL); best-effort.
@@ -113,11 +115,12 @@ export async function POST(request: Request) {
       return { error: error ? { message: error.message } : null };
     },
     async sendMedia(token, number, args) {
+      if (!uazapiCfg) return { providerId: null, error: "uazapi_nao_configurada" };
       try {
-        const { providerId } = await uazapiSendMedia(token, number.replace(/\D/g, ""), {
-          ...args,
-          fileBase64: rawB64,
-        });
+        const { providerId } = await uazapiSendMedia(
+          uazapiCfg.baseUrl, token, number.replace(/\D/g, ""),
+          { ...args, fileBase64: rawB64 },
+        );
         return { providerId };
       } catch (e) {
         return { providerId: null, error: e instanceof Error ? e.message : "send_error" };

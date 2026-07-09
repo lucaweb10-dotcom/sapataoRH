@@ -11,17 +11,16 @@ export class UazapiError extends Error {
   }
 }
 
-function baseUrl(): string {
-  const url = process.env.UAZAPI_API_URL;
-  if (!url) throw new Error("UAZAPI_API_URL is not set");
-  return url.replace(/\/$/, "");
-}
+type Obj = Record<string, unknown>;
+const asObj = (v: unknown): Obj => (v && typeof v === "object" ? (v as Obj) : {});
+const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 
 async function apiFetch(
+  baseUrl: string,
   path: string,
   options: RequestInit & { headers?: Record<string, string> },
 ): Promise<unknown> {
-  const url = `${baseUrl()}${path}`;
+  const url = `${baseUrl.replace(/\/+$/, "")}${path}`;
   const res = await fetch(url, options);
   let body: unknown;
   try {
@@ -35,70 +34,80 @@ async function apiFetch(
   return body;
 }
 
-/** Create a new UAZAPI instance. Uses admintoken header (no Bearer). */
+/** Create a new UAZAPI instance. Uses admintoken header (no Bearer).
+ *  Real response shape: { token, instance: { id, ... } } (instance is an OBJECT). */
 export async function createInstance(
+  baseUrl: string,
   adminToken: string,
   name: string,
 ): Promise<{ instanceId: string; token: string }> {
-  const body = (await apiFetch("/instance/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", admintoken: adminToken },
-    body: JSON.stringify({ name }),
-  })) as Record<string, unknown>;
-
+  const body = asObj(
+    await apiFetch(baseUrl, "/instance/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", admintoken: adminToken },
+      body: JSON.stringify({ name }),
+    }),
+  );
+  const instance = asObj(body["instance"]);
   const instanceId =
-    (body["instanceId"] as string | undefined) ??
-    (body["instance"] as string | undefined) ??
-    (body["id"] as string | undefined) ??
-    "";
-  const token =
-    (body["token"] as string | undefined) ?? (body["apitoken"] as string | undefined) ?? "";
-
+    str(instance["id"]) ?? str(body["instanceId"]) ?? str(body["id"]) ?? "";
+  const token = str(body["token"]) ?? str(instance["token"]) ?? "";
   return { instanceId, token };
 }
 
 /** Connect an instance (start QR flow). Returns the QR string if available. */
 export async function connectInstance(
+  baseUrl: string,
   token: string,
   phone?: string,
 ): Promise<{ qr: string | null }> {
-  const body = await apiFetch("/instance/connect", {
+  const body = await apiFetch(baseUrl, "/instance/connect", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      token,
-    },
+    headers: { "Content-Type": "application/json", token },
     body: JSON.stringify(phone ? { phone } : {}),
   });
   return { qr: extractQr(body) };
 }
 
-/** Get the current status of an instance. */
-export async function instanceStatus(token: string): Promise<{ status: string }> {
-  const body = (await apiFetch("/instance/status", {
-    method: "GET",
-    headers: { token },
-  })) as Record<string, unknown>;
-
+/** Instance status. Real response: { instance: {status, qrcode, paircode}, status: {connected, loggedIn} }.
+ *  The QR is REFRESHED on every call while connecting — callers should re-render it. */
+export async function instanceStatus(
+  baseUrl: string,
+  token: string,
+): Promise<{ status: string; qr: string | null; paircode: string | null }> {
+  const body = asObj(
+    await apiFetch(baseUrl, "/instance/status", { method: "GET", headers: { token } }),
+  );
+  const instance = asObj(body["instance"]);
+  const statusObj = asObj(body["status"]);
   const status =
-    (body["state"] as string | undefined) ??
-    (body["status"] as string | undefined) ??
-    "unknown";
-  return { status };
+    str(instance["status"]) ??
+    (statusObj["connected"] === true || statusObj["loggedIn"] === true
+      ? "connected"
+      : str(body["state"]) ?? "disconnected");
+  return {
+    status,
+    qr: extractQr(body),
+    paircode: str(instance["paircode"]),
+  };
 }
 
 /** Disconnect (logout) an instance. */
-export async function disconnectInstance(token: string): Promise<void> {
-  await apiFetch("/instance/disconnect", {
+export async function disconnectInstance(baseUrl: string, token: string): Promise<void> {
+  await apiFetch(baseUrl, "/instance/disconnect", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify({}),
   });
 }
 
-/** Register a webhook URL for an instance. Path per the UAZAPI OpenAPI (validate live). */
-export async function registerWebhook(token: string, url: string): Promise<void> {
-  await apiFetch("/webhook", {
+/** Register/update the single webhook (UAZAPI "simple mode" — no action/id). Idempotent. */
+export async function registerWebhook(
+  baseUrl: string,
+  token: string,
+  url: string,
+): Promise<void> {
+  await apiFetch(baseUrl, "/webhook", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify({
@@ -112,12 +121,13 @@ export async function registerWebhook(token: string, url: string): Promise<void>
 
 /** Send a text message. Returns the provider message id (tolerant extraction). */
 export async function sendText(
+  baseUrl: string,
   token: string,
   number: string,
   text: string,
   replyId?: string,
 ): Promise<{ providerId: string | null }> {
-  const body = await apiFetch("/send/text", {
+  const body = await apiFetch(baseUrl, "/send/text", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify(replyId ? { number, text, replyid: replyId } : { number, text }),
@@ -125,42 +135,47 @@ export async function sendText(
   return { providerId: extractMessageId(body) };
 }
 
-/** Mark a chat as read (zeroes the badge on the connected phone). Best-effort. */
-export async function markChatRead(token: string, number: string): Promise<void> {
-  await apiFetch("/chat/read", {
+/** Mark a chat as read. Spec wants a JID (5511...@s.whatsapp.net). Best-effort. */
+export async function markChatRead(
+  baseUrl: string,
+  token: string,
+  number: string,
+): Promise<void> {
+  const jid = number.includes("@") ? number : `${number}@s.whatsapp.net`;
+  await apiFetch(baseUrl, "/chat/read", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
-    body: JSON.stringify({ number, read: true }),
+    body: JSON.stringify({ number: jid, read: true }),
   });
 }
 
-/** Download received media (the v2 webhook carries only the id). Returns base64 + mime. */
+/** Download received media. Real response field is `base64Data` (+ mimetype). */
 export async function downloadMedia(
+  baseUrl: string,
   token: string,
   providerMessageId: string,
 ): Promise<{ base64: string | null; mime: string | null }> {
-  const body = (await apiFetch("/message/download", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", token },
-    body: JSON.stringify({ id: providerMessageId, return_base64: true, return_link: false }),
-  })) as Record<string, unknown>;
+  const body = asObj(
+    await apiFetch(baseUrl, "/message/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token },
+      body: JSON.stringify({ id: providerMessageId, return_base64: true, return_link: false }),
+    }),
+  );
   const base64 =
-    (body["base64"] as string | undefined) ??
-    (body["data"] as string | undefined) ??
-    (body["file"] as string | undefined) ??
-    null;
-  const mime =
-    (body["mimetype"] as string | undefined) ?? (body["mime"] as string | undefined) ?? null;
+    str(body["base64Data"]) ?? str(body["base64"]) ?? str(body["data"]) ?? str(body["file"]);
+  const mime = str(body["mimetype"]) ?? str(body["mime"]);
   return { base64, mime };
 }
 
 /** Send media. Caption goes in `text` (NOT `caption`); docName only for documents. */
 export async function sendMedia(
+  baseUrl: string,
   token: string,
   number: string,
   args: { type: "image" | "video" | "audio" | "ptt" | "document"; fileBase64: string; mimetype: string; docName?: string; caption?: string },
 ): Promise<{ providerId: string | null }> {
-  const body = await apiFetch("/send/media", {
+  const body = await apiFetch(baseUrl, "/send/media", {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify({

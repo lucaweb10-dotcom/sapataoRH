@@ -112,7 +112,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
     const admin = createAdminClient();
     const { data: inst } = await admin
       .from("whatsapp_instances")
-      .select("id, empresa_id, webhook_secret, uazapi_token")
+      .select("id, empresa_id, webhook_secret, uazapi_token, uazapi_base_url")
       .eq("uazapi_instance_id", instanceId)
       .maybeSingle();
 
@@ -136,34 +136,37 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
       if (MEDIA_TYPES.includes(event.messageType)) {
         const empresaId = inst.empresa_id;
         const token = inst.uazapi_token ?? "";
+        const mediaBaseUrl = inst.uazapi_base_url ?? process.env.UAZAPI_API_URL ?? "";
         const providerMessageId = event.providerMessageId;
-        after(async () => {
-          await downloadAndStoreInbound(
-            { empresaId, providerMessageId, token },
-            {
-              getMessage: async (pid) => {
-                const { data } = await admin
-                  .from("messages")
-                  .select("id, midia_url")
-                  .eq("empresa_id", empresaId)
-                  .eq("uazapi_msg_id", pid)
-                  .maybeSingle();
-                return data ? { id: data.id, midia_url: data.midia_url } : null;
+        if (mediaBaseUrl && token) {
+          after(async () => {
+            await downloadAndStoreInbound(
+              { empresaId, providerMessageId, token },
+              {
+                getMessage: async (pid) => {
+                  const { data } = await admin
+                    .from("messages")
+                    .select("id, midia_url")
+                    .eq("empresa_id", empresaId)
+                    .eq("uazapi_msg_id", pid)
+                    .maybeSingle();
+                  return data ? { id: data.id, midia_url: data.midia_url } : null;
+                },
+                download: (tk, pid) => downloadMedia(mediaBaseUrl, tk, pid),
+                upload: async (path, bytes, mime) => {
+                  const { error } = await admin.storage
+                    .from("whatsapp-media")
+                    .upload(path, bytes, { contentType: mime, upsert: true });
+                  return { error: error ? { message: error.message } : null };
+                },
+                setMedia: async (id, fields) => {
+                  const { error } = await admin.from("messages").update(fields).eq("id", id);
+                  return { error: error ? { message: error.message } : null };
+                },
               },
-              download: (tk, pid) => downloadMedia(tk, pid),
-              upload: async (path, bytes, mime) => {
-                const { error } = await admin.storage
-                  .from("whatsapp-media")
-                  .upload(path, bytes, { contentType: mime, upsert: true });
-                return { error: error ? { message: error.message } : null };
-              },
-              setMedia: async (id, fields) => {
-                const { error } = await admin.from("messages").update(fields).eq("id", id);
-                return { error: error ? { message: error.message } : null };
-              },
-            },
-          );
-        });
+            );
+          });
+        }
       }
     } else if (event.kind === "connection") {
       await admin

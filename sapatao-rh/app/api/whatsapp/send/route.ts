@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMessageSchema } from "@/lib/validations/whatsapp";
 import { enviarMensagem, type SendDeps } from "@/lib/whatsapp/send";
 import { sendText as uazapiSendText } from "@/lib/uazapi/client";
+import { getUazapiConfig } from "@/lib/uazapi/config";
 
 function canSend(role: string, platformAdmin: boolean): boolean {
   return role === "admin" || role === "rh" || platformAdmin;
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const empresaId = profile.empresa_id;
+  const uazapiCfg = await getUazapiConfig(admin, empresaId);
 
   const deps: SendDeps = {
     async loadContext(convId) {
@@ -100,8 +102,11 @@ export async function POST(request: Request) {
       return { error: error ? { message: error.message } : null };
     },
     async sendText(token, number, text) {
+      if (!uazapiCfg) return { providerId: null, error: "uazapi_nao_configurada" };
       try {
-        const { providerId } = await uazapiSendText(token, number.replace(/\D/g, ""), text);
+        const { providerId } = await uazapiSendText(
+          uazapiCfg.baseUrl, token, number.replace(/\D/g, ""), text,
+        );
         return { providerId };
       } catch (e) {
         return { providerId: null, error: e instanceof Error ? e.message : "send_error" };
