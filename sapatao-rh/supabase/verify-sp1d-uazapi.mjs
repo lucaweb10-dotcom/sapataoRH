@@ -49,7 +49,7 @@ async function main() {
       empresa_id: empresa.id, nome: "WhatsApp RH",
       uazapi_instance_id: instanceId, uazapi_token: "tok-e2e",
       uazapi_base_url: GATEWAY, uazapi_admin_token: "admin-e2e",
-      webhook_secret: secret, status: "conectado",
+      webhook_secret: secret, status: "desconectado",
     },
     { onConflict: "empresa_id" },
   );
@@ -105,6 +105,8 @@ async function main() {
   if (mmsg?.midia_url) {
     const { data: blob } = await admin.storage.from("whatsapp-media").download(mmsg.midia_url);
     ok("arquivo existe no bucket", !!blob && blob.size > 0);
+  } else {
+    ok("arquivo existe no bucket", false);
   }
 
   console.log("4) status forward-only");
@@ -122,9 +124,20 @@ async function main() {
   await sleep(500);
   const { data: instRow } = await admin.from("whatsapp_instances").select("status").eq("empresa_id", empresa.id).single();
   ok("instância marcada conectado", instRow.status === "conectado");
-  const { data: evs } = await admin.from("whatsapp_webhook_events").select("parsed_kind").eq("empresa_id", empresa.id).order("created_at", { ascending: false }).limit(50);
-  ok("eventos logados (message/status/connection)", ["message", "status", "connection"].every((k) => evs.some((e) => e.parsed_kind === k)));
-  ok("retenção ≤ 50", (evs?.length ?? 0) <= 50);
+  const { data: evs } = await admin.from("whatsapp_webhook_events").select("parsed_kind, payload").eq("empresa_id", empresa.id).order("created_at", { ascending: false }).limit(50);
+  const evsThisRun = (evs ?? []).filter((e) => e.payload?.instance === instanceId);
+  ok("eventos logados (message/status/connection)", ["message", "status", "connection"].every((k) => evsThisRun.some((e) => e.parsed_kind === k)));
+
+  console.log("6) retenção (prune mantém só os 50 mais recentes por empresa)");
+  for (let i = 0; i < 55; i++) {
+    await hook({ event: "connection", instance: instanceId, status: "connected" });
+  }
+  await sleep(1000);
+  const { count: retCount } = await admin
+    .from("whatsapp_webhook_events")
+    .select("id", { count: "exact", head: true })
+    .eq("empresa_id", empresa.id);
+  ok("retenção = 50 (prune)", retCount === 50);
 
   console.log(`\n${pass} ok, ${fail} falhas`);
   process.exit(fail ? 1 : 0);
