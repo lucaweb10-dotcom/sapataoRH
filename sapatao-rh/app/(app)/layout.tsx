@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
@@ -38,7 +39,11 @@ export default async function AppLayout({
     <div className="flex h-screen overflow-hidden">
       <Sidebar role={profile.role} profile={profile} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar profile={profile} unidades={visiveis} />
+        <Suspense
+          fallback={<div className="h-14 shrink-0 border-b border-neutro-200 bg-card" />}
+        >
+          <Topbar profile={profile} unidades={visiveis} />
+        </Suspense>
         <main className="flex-1 overflow-hidden bg-neutro-50">{children}</main>
       </div>
       <Toaster />

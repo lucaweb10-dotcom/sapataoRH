@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buscaOr } from "@/lib/candidatos/filtros";
 import type { Candidato, Funil, FunilEtapa } from "@/types/database";
 
 export type FunilComEtapas = { funil: Funil; etapas: FunilEtapa[] };
@@ -22,6 +23,7 @@ export type CandidatoFunil = Pick<
   | "unidade_id"
   | "notas_internas"
   | "status"
+  | "atribuido_a"
 > & { conversationId: string | null };
 
 export type HistoricoEntry = {
@@ -57,11 +59,19 @@ export async function getFunilComEtapas(funilId?: string): Promise<FunilComEtapa
   return { funil, etapas: (etapas ?? []) as FunilEtapa[] };
 }
 
-/** Returns candidatos whose etapa_id is one of `etapaIds` (RLS-scoped),
- *  optionally filtered by unidade. Embeds the candidato's conversation id. */
+export type FiltrosBoard = {
+  q?: string;
+  vaga?: string | null;
+  respId?: string | null;
+  unidadeId?: string | null;
+};
+
+/** Returns candidatos whose etapa_id is one of `etapaIds` (RLS-scoped), com
+ *  filtros server-side de busca/vaga/responsável/unidade (spec SP6 §6).
+ *  Embeds the candidato's conversation id. */
 export async function listCandidatosDoFunil(
   etapaIds: string[],
-  unidadeId?: string | null,
+  filtros: FiltrosBoard = {},
 ): Promise<CandidatoFunil[]> {
   if (etapaIds.length === 0) return [];
   const supabase = await createClient();
@@ -69,11 +79,16 @@ export async function listCandidatosDoFunil(
   let query = supabase
     .from("candidatos")
     .select(
-      "id, nome, telefone, cep, idade, endereco, vaga_interesse, score_ia, parecer_ia, tags, etapa_id, etapa_entrou_em, avatar_url, unidade_id, notas_internas, status, conversations(id)",
+      "id, nome, telefone, cep, idade, endereco, vaga_interesse, score_ia, parecer_ia, tags, etapa_id, etapa_entrou_em, avatar_url, unidade_id, notas_internas, status, atribuido_a, conversations(id)",
     )
     .in("etapa_id", etapaIds)
     .order("etapa_entrou_em", { ascending: true, nullsFirst: true });
-  if (unidadeId) query = query.eq("unidade_id", unidadeId);
+
+  const or = filtros.q ? buscaOr(filtros.q) : null;
+  if (or) query = query.or(or);
+  if (filtros.vaga) query = query.eq("vaga_interesse", filtros.vaga);
+  if (filtros.respId) query = query.eq("atribuido_a", filtros.respId);
+  if (filtros.unidadeId) query = query.eq("unidade_id", filtros.unidadeId);
 
   const { data, error } = await query;
   if (error) {
