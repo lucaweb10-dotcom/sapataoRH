@@ -1,25 +1,34 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { SOM_STORAGE_KEY } from "@/components/shell/notificacoes-provider";
 
-/** Toggle de som das notificações (por dispositivo, localStorage; default OFF).
- *  Inicializa em false e sincroniza no effect para evitar mismatch de hidratação. */
-export function SomToggle() {
-  const [ligado, setLigado] = useState(false);
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
 
-  useEffect(() => {
-    // Sincroniza com localStorage (fonte externa) só depois da hidratação —
-    // ler no render causaria mismatch SSR/cliente. Disable pontual: não há
-    // "external system" para assinar aqui, é uma leitura única no mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLigado(window.localStorage.getItem(SOM_STORAGE_KEY) === "1");
-  }, []);
+function getSnapshot() {
+  return window.localStorage.getItem(SOM_STORAGE_KEY) === "1";
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
+/** Toggle de som das notificações (por dispositivo, localStorage; default OFF).
+ *  Lê via useSyncExternalStore (default false no servidor, evitando mismatch de
+ *  hidratação) e assina o evento "storage" para refletir mudanças de outras abas
+ *  — e, como o próprio botão grava localmente, dispara um StorageEvent sintético
+ *  para atualizar-se de imediato (o evento nativo "storage" não dispara na aba
+ *  que fez a escrita). */
+export function SomToggle() {
+  const ligado = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const alternar = () => {
     const proximo = !ligado;
-    setLigado(proximo);
     window.localStorage.setItem(SOM_STORAGE_KEY, proximo ? "1" : "0");
+    window.dispatchEvent(new StorageEvent("storage", { key: SOM_STORAGE_KEY }));
   };
 
   return (
