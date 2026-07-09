@@ -70,8 +70,15 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
   }
 
   if (event === "messages_update" || (p["status"] && p["messageid"] && !p["message"])) {
-    const id = extractMessageId(p);
-    const status = normalizeStatus(p["status"]);
+    // Payload real (capturado ao vivo): recibo whatsmeow — ids em event.MessageIDs[],
+    // status em `state` (topo) ou event.Type ("Read"/"Delivered").
+    const ev = asObj(p["event"]);
+    const messageIds = Array.isArray(ev["MessageIDs"])
+      ? (ev["MessageIDs"] as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+    const id = extractMessageId(p) ?? messageIds[0] ?? null;
+    const status =
+      normalizeStatus(p["status"]) ?? normalizeStatus(p["state"]) ?? normalizeStatus(ev["Type"]);
     if (id && status) return { kind: "status", providerMessageId: id, status };
     return { kind: "ignore" };
   }
@@ -80,17 +87,27 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
     const m = asObj(p["message"]);
     const id = extractMessageId(m);
     if (!id) return { kind: "ignore" };
+    // Payload real (capturado ao vivo): grupos chegam com isGroup=true e chatid @g.us.
+    // Grupo não é candidato — ignorar para não criar registros com telefone inválido.
+    if (m["isGroup"] === true || (str(m["chatid"]) ?? "").includes("@g.us")) {
+      return { kind: "ignore" };
+    }
+    // Payload real: `chat` (com wa_name/wa_contactName/name) é irmão de `message` no topo.
     const chat = asObj(m["chat"]);
+    const topChat = asObj(p["chat"]);
     const fromMe = m["fromMe"] === true;
     return {
       kind: "message",
       instanceId,
       direction: fromMe ? "outbound" : "inbound",
-      messageType: str(m["messageType"]) ?? "text",
+      // Payload real: `messageType` é o tipo bruto do WA ("Conversation", "ImageMessage");
+      // os campos normalizados são `type`/`mediaType` ("text", "image", ...).
+      messageType:
+        str(m["type"]) ?? str(m["mediaType"]) ?? str(m["messageType"]) ?? "text",
       content: str(m["text"]) ?? str(m["conteudo"]) ?? str(m["body"]) ?? "",
       phone: normalizePhone(str(m["chatid"]) ?? str(m["phone"]) ?? ""),
       providerMessageId: id,
-      contactName: contactNameFromChat(chat),
+      contactName: contactNameFromChat(chat) ?? contactNameFromChat(topChat),
       senderName: str(m["senderName"]),
       wasSentByApi: m["wasSentByApi"] === true,
       mediaMime: str(m["mimetype"]) ?? str(m["mime"]) ?? mimeFromContent(m),

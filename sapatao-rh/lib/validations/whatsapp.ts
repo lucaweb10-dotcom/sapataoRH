@@ -31,7 +31,7 @@ export type SendMediaInputDTO = z.infer<typeof sendMediaSchema>;
 const urlLimpa = z
   .string()
   .trim()
-  .pipe(z.url({ error: "URL inválida" }))
+  .pipe(z.url({ protocol: /^https?$/, error: "URL inválida (use http/https)" }))
   .transform((u) => u.replace(/\/+$/, ""));
 
 export const credenciaisUazapiSchema = z.object({

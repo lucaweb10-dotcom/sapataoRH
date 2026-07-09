@@ -21,6 +21,9 @@ describe("credenciaisUazapiSchema", () => {
     expect(credenciaisUazapiSchema.safeParse({ baseUrl: "nao-e-url", adminToken: "tok-12345678" }).success).toBe(false);
     expect(credenciaisUazapiSchema.safeParse({ baseUrl: "https://x.uazapi.com", adminToken: "curto" }).success).toBe(false);
   });
+  it("rejeita protocolo não-http(s)", () => {
+    expect(credenciaisUazapiSchema.safeParse({ baseUrl: "ftp://x.uazapi.com", adminToken: "tok-12345678" }).success).toBe(false);
+  });
 });
 
 describe("webhookPublicoSchema", () => {
