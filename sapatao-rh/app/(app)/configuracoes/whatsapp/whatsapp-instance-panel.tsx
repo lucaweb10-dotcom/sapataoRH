@@ -87,6 +87,7 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
     setLoading(true);
     setUazapiMissing(false);
     try {
+      setPaircode(null);
       const result = await conectar();
       if (result.error === "uazapi_nao_configurada" || result.error === "uazapi_sem_admin_token") {
         setUazapiMissing(true);
@@ -115,6 +116,7 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
       }
       setStatus("desconectado");
       setQr(null);
+      setPaircode(null);
       setPhone(null);
       stopPolling();
       toast.success("WhatsApp desconectado.");
