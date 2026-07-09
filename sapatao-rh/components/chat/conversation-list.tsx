@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { NovaConversaDialog } from "@/components/chat/nova-conversa-dialog";
+import { SomToggle } from "@/components/chat/som-toggle";
 import { cn } from "@/lib/utils";
 import {
   filtrarConversas,
@@ -106,7 +107,10 @@ export function ConversationList({
       <div className="border-b border-neutro-200 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
-          <NovaConversaDialog vagas={vagas} unidades={unidades} />
+          <div className="flex items-center gap-1.5">
+            <SomToggle />
+            <NovaConversaDialog vagas={vagas} unidades={unidades} />
+          </div>
         </div>
         <input
           type="search"
