@@ -3,16 +3,9 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { scoreFaixa, type ScoreFaixa } from "@/lib/funil/scoring";
+import { ScoreBadge } from "@/components/shared/score-badge";
 import { tempoNaEtapa } from "@/lib/funil/tempo";
 import type { CandidatoFunil } from "@/lib/funil/queries";
-
-const FAIXA_STYLE: Record<ScoreFaixa, string> = {
-  sem: "bg-neutro-100 text-neutro-600",
-  baixo: "bg-[#fbe6df] text-[#c0492b]",
-  medio: "bg-[#f8ecd9] text-[#a9692a]",
-  alto: "bg-brand-50 text-brand-700",
-};
 
 function initials(nome: string): string {
   const parts = nome.trim().split(/\s+/);
@@ -38,7 +31,6 @@ export function CandidateCard({
     data: { candidato },
     disabled: !canMove,
   });
-  const faixa = scoreFaixa(candidato.score_ia);
   const tempo = tempoNaEtapa(candidato.etapa_entrou_em, now);
   const tags = (candidato.tags ?? []).slice(0, 3);
 
@@ -70,12 +62,7 @@ export function CandidateCard({
             <p className="truncate text-xs text-neutro-500">{candidato.vaga_interesse}</p>
           )}
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${FAIXA_STYLE[faixa]}`}
-          title="Score IA"
-        >
-          {faixa === "sem" ? "—" : candidato.score_ia}
-        </span>
+        <ScoreBadge score={candidato.score_ia} />
       </div>
 
       {tags.length > 0 && (

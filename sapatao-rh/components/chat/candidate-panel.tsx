@@ -1,9 +1,11 @@
+import Link from "next/link";
 import type { Candidato } from "@/types/database";
 import { ParecerView } from "@/components/cv/parecer-view";
 
 interface Props {
   candidato: Pick<
     Candidato,
+    | "id"
     | "nome"
     | "telefone"
     | "vaga_interesse"
@@ -30,8 +32,14 @@ export function CandidatePanel({ candidato }: Props) {
   return (
     <div className="flex h-full flex-col overflow-y-auto border-l border-neutro-200 bg-white">
       {/* Header */}
-      <div className="border-b border-neutro-200 p-4">
+      <div className="flex items-center justify-between gap-2 border-b border-neutro-200 p-4">
         <h3 className="font-display text-sm font-semibold text-neutro-900">Candidato</h3>
+        <Link
+          href={`/candidatos/${candidato.id}`}
+          className="text-xs font-medium text-brand-700 hover:underline"
+        >
+          Ver ficha
+        </Link>
       </div>
 
       <div className="flex-1 space-y-5 p-4">

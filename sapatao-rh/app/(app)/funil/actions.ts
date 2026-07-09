@@ -79,7 +79,10 @@ export async function moverCandidatoAction(input: {
     },
     deps,
   );
-  if (result.ok) revalidatePath("/funil");
+  if (result.ok) {
+    revalidatePath("/funil");
+    revalidatePath("/candidatos");
+  }
   return result;
 }
 
@@ -100,6 +103,7 @@ export async function salvarNotas(input: { candidatoId: string; notas: string })
     return { ok: false };
   }
   revalidatePath("/funil");
+  revalidatePath("/candidatos");
   return { ok: true };
 }
 

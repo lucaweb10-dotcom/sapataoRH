@@ -225,6 +225,10 @@ export function CandidateModal({
             Abrir conversa
           </Button>
 
+          <Button size="sm" variant="outline" render={<Link href={`/candidatos/${candidato.id}`} />}>
+            Ver ficha
+          </Button>
+
           {canMove && (
             <Select value={null} onValueChange={(v: string | null) => { if (v) onMover(v); }}>
               <SelectTrigger size="sm">
