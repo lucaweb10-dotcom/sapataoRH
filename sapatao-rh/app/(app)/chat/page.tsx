@@ -10,6 +10,7 @@ import {
 import { getFunilComEtapas } from "@/lib/funil/queries";
 import { listVagasDistintas } from "@/lib/candidatos/queries";
 import { listarResponsaveis } from "@/app/(app)/candidatos/actions";
+import { createClient } from "@/lib/supabase/server";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { MessageThread } from "@/components/chat/message-thread";
 import { CandidatePanel } from "@/components/chat/candidate-panel";
@@ -31,13 +32,16 @@ export default async function ChatPage({
   const { c } = await searchParams;
   const activeConversationId = typeof c === "string" ? c : null;
 
-  const [empresaId, conversations, funil, vagas, responsaveis] = await Promise.all([
+  const supabase = await createClient();
+  const [empresaId, conversations, funil, vagas, responsaveis, unidadesRes] = await Promise.all([
     getEmpresaId(),
     listConversations(),
     getFunilComEtapas(),
     listVagasDistintas(),
     listarResponsaveis(),
+    supabase.from("unidades").select("id, nome").eq("ativa", true).order("nome"),
   ]);
+  const unidades = (unidadesRes.data ?? []) as { id: string; nome: string }[];
 
   // Default to the first conversation when none is explicitly selected.
   const displayedConvId = activeConversationId ?? conversations[0]?.id ?? null;
@@ -61,7 +65,12 @@ export default async function ChatPage({
     <div className="flex h-full overflow-hidden">
       {/* Column 1 — Conversation list (280px) */}
       <div className="w-[280px] shrink-0">
-        <ConversationList conversations={conversations} activeId={displayedConvId} />
+        <ConversationList
+          conversations={conversations}
+          activeId={displayedConvId}
+          vagas={vagas}
+          unidades={unidades}
+        />
       </div>
 
       {/* Column 2 — Message thread (flex-1) */}

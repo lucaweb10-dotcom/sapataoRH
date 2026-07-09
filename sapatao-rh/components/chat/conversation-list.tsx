@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { NovaConversaDialog } from "@/components/chat/nova-conversa-dialog";
 import type { ConversationWithCandidato } from "@/lib/chat/queries";
 
 // Normalize text for search: lowercase + strip diacritics
@@ -31,9 +32,11 @@ function relativeTime(dateStr: string | null): string {
 interface Props {
   conversations: ConversationWithCandidato[];
   activeId: string | null;
+  vagas: string[];
+  unidades: { id: string; nome: string }[];
 }
 
-export function ConversationList({ conversations, activeId }: Props) {
+export function ConversationList({ conversations, activeId, vagas, unidades }: Props) {
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -64,7 +67,10 @@ export function ConversationList({ conversations, activeId }: Props) {
     <div className="flex h-full flex-col border-r border-neutro-200 bg-white">
       {/* Search header */}
       <div className="border-b border-neutro-200 p-3">
-        <h2 className="mb-2 font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
+          <NovaConversaDialog vagas={vagas} unidades={unidades} />
+        </div>
         <input
           type="search"
           placeholder="Buscar candidato..."
