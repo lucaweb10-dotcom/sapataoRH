@@ -17,6 +17,7 @@ function canWrite(role: string, platformAdmin: boolean): boolean {
 
 export type Responsavel = { id: string; nome: string };
 export type CandidatoBusca = { id: string; nome: string; telefone: string };
+export type AtualizarPatch = AtualizarCandidatoInput;
 
 /** Cria um candidato manual (indicação/presencial/etc). O trigger BEFORE INSERT
  *  da 0010 posiciona na 1ª etapa do funil padrão. Telefone duplicado (unique

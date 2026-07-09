@@ -7,6 +7,9 @@ import {
   getEmpresaId,
   type ThreadResult,
 } from "@/lib/chat/queries";
+import { getFunilComEtapas } from "@/lib/funil/queries";
+import { listVagasDistintas } from "@/lib/candidatos/queries";
+import { listarResponsaveis } from "@/app/(app)/candidatos/actions";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { MessageThread } from "@/components/chat/message-thread";
 import { CandidatePanel } from "@/components/chat/candidate-panel";
@@ -23,13 +26,17 @@ export default async function ChatPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  const canEdit = profile.platform_admin || profile.role === "admin" || profile.role === "rh";
 
   const { c } = await searchParams;
   const activeConversationId = typeof c === "string" ? c : null;
 
-  const [empresaId, conversations] = await Promise.all([
+  const [empresaId, conversations, funil, vagas, responsaveis] = await Promise.all([
     getEmpresaId(),
     listConversations(),
+    getFunilComEtapas(),
+    listVagasDistintas(),
+    listarResponsaveis(),
   ]);
 
   // Default to the first conversation when none is explicitly selected.
@@ -73,10 +80,16 @@ export default async function ChatPage({
         )}
       </div>
 
-      {/* Column 3 — Candidate panel (260px) */}
+      {/* Column 3 — Candidate ACTION panel (260px) */}
       {activeCandidato && (
         <div className="w-[260px] shrink-0">
-          <CandidatePanel candidato={activeCandidato} />
+          <CandidatePanel
+            candidato={activeCandidato}
+            etapas={funil?.etapas ?? []}
+            vagas={vagas}
+            responsaveis={responsaveis}
+            canEdit={canEdit}
+          />
         </div>
       )}
 
