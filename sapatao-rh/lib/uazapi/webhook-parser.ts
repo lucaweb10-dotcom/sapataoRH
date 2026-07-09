@@ -40,9 +40,22 @@ function contactNameFromChat(chat: Obj): string | null {
   return str(chat["wa_name"]) ?? str(chat["wa_contactName"]) ?? str(chat["name"]) ?? null;
 }
 
+function mimeFromContent(m: Obj): string | null {
+  const c = m["content"];
+  if (c && typeof c === "object") return str((c as Obj)["mimetype"]);
+  if (typeof c === "string" && c.startsWith("{")) {
+    try {
+      return str((JSON.parse(c) as Obj)["mimetype"]);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function parseUazapiEvent(raw: unknown): UazapiEvent {
   const p = asObj(raw);
-  const event = str(p["event"]);
+  const event = str(p["event"]) ?? str(p["EventType"]);
   const instanceId = str(p["instance"]) ?? str(p["instanceName"]) ?? str(p["instance_id"]);
 
   if (event === "connection") {
@@ -80,7 +93,7 @@ export function parseUazapiEvent(raw: unknown): UazapiEvent {
       contactName: contactNameFromChat(chat),
       senderName: str(m["senderName"]),
       wasSentByApi: m["wasSentByApi"] === true,
-      mediaMime: str(m["mimetype"]) ?? str(m["mime"]),
+      mediaMime: str(m["mimetype"]) ?? str(m["mime"]) ?? mimeFromContent(m),
     };
   }
 

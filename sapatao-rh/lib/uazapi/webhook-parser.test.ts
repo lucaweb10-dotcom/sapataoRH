@@ -87,3 +87,37 @@ describe("parseUazapiEvent", () => {
     expect(e3.contactName).toBeNull();
   });
 });
+
+describe("tolerância de envelope (SP1d)", () => {
+  it("aceita EventType como sinônimo de event", () => {
+    const e = parseUazapiEvent({
+      EventType: "messages",
+      instance: "inst-1",
+      message: { messageid: "M1", chatid: "5551999@s.whatsapp.net", fromMe: false, text: "oi" },
+    });
+    expect(e.kind).toBe("message");
+  });
+
+  it("extrai mimetype de message.content objeto", () => {
+    const e = parseUazapiEvent({
+      event: "messages",
+      message: {
+        messageid: "M2", chatid: "5551999@s.whatsapp.net", fromMe: false,
+        messageType: "image", content: { mimetype: "image/jpeg", caption: "" },
+      },
+    });
+    expect(e.kind).toBe("message");
+    if (e.kind === "message") expect(e.mediaMime).toBe("image/jpeg");
+  });
+
+  it("extrai mimetype de message.content JSON serializado", () => {
+    const e = parseUazapiEvent({
+      event: "messages",
+      message: {
+        messageid: "M3", chatid: "5551999@s.whatsapp.net", fromMe: false,
+        messageType: "document", content: '{"mimetype":"application/pdf"}',
+      },
+    });
+    if (e.kind === "message") expect(e.mediaMime).toBe("application/pdf");
+  });
+});
