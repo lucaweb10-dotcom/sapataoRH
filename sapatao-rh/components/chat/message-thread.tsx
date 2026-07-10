@@ -384,6 +384,7 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
             fileBase64: btoa(b64),
             mime,
             fileName,
+            voiceNote: item.media?.voiceNote,
           });
         },
       );

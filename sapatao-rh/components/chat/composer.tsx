@@ -110,7 +110,7 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
     }`;
 
     enqueueAndRun(
-      { clientMessageId, conversationId, texto: "", media: { objectUrl, mime, fileName } },
+      { clientMessageId, conversationId, texto: "", media: { objectUrl, mime, fileName, voiceNote: true } },
       () => dispatchSendMedia({ clientMessageId, conversationId, fileBase64, mime, fileName, voiceNote: true }),
     );
   }
@@ -154,13 +154,17 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
 
   function handleCancelRecording() {
     cancelledRef.current = true;
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     setIsRecording(false);
   }
 
   function handleFinishRecording() {
     cancelledRef.current = false;
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     setIsRecording(false);
   }
 

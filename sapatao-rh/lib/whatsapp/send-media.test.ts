@@ -63,6 +63,16 @@ describe("enviarMidia", () => {
     expect(deps.sendMedia).toHaveBeenCalled();
   });
 
+  it("reuseFailed claimed + voiceNote: true (retry) → sendMedia called with type 'ptt'", async () => {
+    const deps = makeDeps({
+      findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as MessageStatus })),
+      reuseFailed: vi.fn(async () => ({ claimed: true, error: null })),
+    });
+    const r = await enviarMidia({ ...input, mime: "audio/webm", voiceNote: true }, deps);
+    expect(r.ok).toBe(true);
+    expect(deps.sendMedia).toHaveBeenCalledWith("TKN", "5551999999999", expect.objectContaining({ type: "ptt" }));
+  });
+
   it("reuseFailed not claimed (concurrent) → ok no-op, sendMedia not called", async () => {
     const deps = makeDeps({
       findByClientId: vi.fn(async () => ({ id: "msg-f", status: "failed" as MessageStatus })),
