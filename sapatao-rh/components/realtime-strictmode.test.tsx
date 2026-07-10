@@ -79,6 +79,7 @@ vi.mock("next/navigation", () => ({
 
 import { ChatRealtime } from "./chat/realtime";
 import { FunilRealtime } from "./funil/realtime";
+import { NotificacoesProvider } from "./shell/notificacoes-provider";
 
 async function flushAsync() {
   // Drain the async IIFEs (getSession + setAuth) scheduled by the effects.
@@ -107,6 +108,18 @@ describe("realtime subscription safety under React Strict Mode", () => {
     render(
       <StrictMode>
         <FunilRealtime empresaId="e1" />
+      </StrictMode>,
+    );
+    await flushAsync();
+    expect(h.onAfterSubscribe).toEqual([]);
+  });
+
+  it("NotificacoesProvider never adds postgres_changes after subscribe()", async () => {
+    render(
+      <StrictMode>
+        <NotificacoesProvider empresaId="e1" conversasIniciais={[]}>
+          <div />
+        </NotificacoesProvider>
       </StrictMode>,
     );
     await flushAsync();

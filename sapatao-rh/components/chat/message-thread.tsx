@@ -8,13 +8,15 @@ import type { MessageStatus } from "@/types/database";
 import type { MessageWithSignedUrl } from "@/lib/chat/queries";
 import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
-import { Composer } from "./composer";
+import { Composer, type TemplatePronto } from "./composer";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
 
 interface Props {
   messages: MessageWithSignedUrl[];
   hasMore: boolean;
   conversationId: string;
+  prefill: string | null;
+  templates: TemplatePronto[];
 }
 
 function formatTime(dateStr: string): string {
@@ -180,8 +182,31 @@ function ServerMediaContent({
 
   if (msg.tipo === "audio" || msg.tipo === "ptt") {
     return url ? (
-       
       <audio controls src={url} className="max-w-[240px]" />
+    ) : (
+      <MediaPlaceholder />
+    );
+  }
+
+  if (msg.tipo === "video") {
+    return (
+      <div>
+        {url ? (
+          <video controls src={url} className="max-w-[240px] rounded-lg" />
+        ) : (
+          <MediaPlaceholder />
+        )}
+        {msg.conteudo && (
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.conteudo}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (msg.tipo === "sticker") {
+    return url ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="figurinha" className="max-w-[120px]" />
     ) : (
       <MediaPlaceholder />
     );
@@ -218,7 +243,7 @@ function ServerMediaContent({
     );
   }
 
-  // text / system / video / sticker / unknown — fallback
+  // text / system / unknown — fallback
   return <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>;
 }
 
@@ -246,7 +271,11 @@ function QueueMediaContent({ item, isOutbound }: { item: QueueItem; isOutbound: 
     );
   }
 
-  // document / audio / etc — show file name card
+  if (mime.startsWith("audio/")) {
+    return <audio controls src={objectUrl} className="max-w-[240px]" />;
+  }
+
+  // document / etc — show file name card
   return (
     <div className="flex items-center gap-2">
       <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />
@@ -282,7 +311,7 @@ function groupByDate(items: DisplayedMessage[]): { date: string; items: Displaye
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function MessageThread({ messages, hasMore, conversationId }: Props) {
+export function MessageThread({ messages, hasMore, conversationId, prefill, templates }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Zustand store selectors
@@ -355,6 +384,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
             fileBase64: btoa(b64),
             mime,
             fileName,
+            voiceNote: item.media?.voiceNote,
           });
         },
       );
@@ -501,7 +531,7 @@ export function MessageThread({ messages, hasMore, conversationId }: Props) {
       </div>
 
       {/* Composer */}
-      <Composer conversationId={conversationId} />
+      <Composer conversationId={conversationId} prefill={prefill} templates={templates} />
     </div>
   );
 }

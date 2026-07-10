@@ -10,7 +10,7 @@ export interface QueueItem {
   attempts: number;
   createdAt: string;
   /** Present only for media items — carries the optimistic preview objectURL. */
-  media?: { objectUrl: string; mime: string; fileName: string };
+  media?: { objectUrl: string; mime: string; fileName: string; voiceNote?: boolean };
 }
 
 export type QueueState = Record<string, QueueItem[]>;

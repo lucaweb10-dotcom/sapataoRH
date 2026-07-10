@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { navItemsForRole } from "@/lib/auth/rbac";
+import { UnreadBadge } from "@/components/shell/notificacoes-provider";
 import type { Profile, Role } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ export function Sidebar({ role, profile }: { role: Role; profile: Profile }) {
             >
               <Icon className={cn("size-[18px]", active ? "text-brand-700" : "text-neutro-500")} />
               {item.label}
+              {item.key === "chat" && <UnreadBadge />}
             </Link>
           );
         })}

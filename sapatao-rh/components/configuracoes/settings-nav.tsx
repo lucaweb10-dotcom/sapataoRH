@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/configuracoes/whatsapp", label: "WhatsApp" },
   { href: "/configuracoes/funil", label: "Funil" },
   { href: "/configuracoes/ia", label: "IA" },
+  { href: "/configuracoes/templates", label: "Templates" },
 ];
 
 export function SettingsNav() {

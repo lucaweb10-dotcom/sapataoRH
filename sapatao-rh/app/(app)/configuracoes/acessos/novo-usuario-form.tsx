@@ -25,6 +25,13 @@ import {
 
 const ROLES = ["admin", "rh", "gestor_unidade", "viewer"] as const;
 
+const ROLE_LABEL: Record<(typeof ROLES)[number], string> = {
+  admin: "Admin",
+  rh: "RH",
+  gestor_unidade: "Gestor de unidade",
+  viewer: "Visualizador",
+};
+
 const ERRORS: Record<string, string> = {
   email_exists: "Já existe um usuário com esse e-mail.",
   invalid: "Verifique os campos do formulário.",
@@ -100,6 +107,7 @@ export function NovoUsuarioForm({ unidades }: { unidades: Unidade[] }) {
               onValueChange={(v: string | null) => {
                 if (v) setRole(v);
               }}
+              items={ROLE_LABEL}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -107,7 +115,7 @@ export function NovoUsuarioForm({ unidades }: { unidades: Unidade[] }) {
               <SelectContent>
                 {ROLES.map((r) => (
                   <SelectItem key={r} value={r} className="capitalize">
-                    {r}
+                    {ROLE_LABEL[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -120,6 +128,7 @@ export function NovoUsuarioForm({ unidades }: { unidades: Unidade[] }) {
               onValueChange={(v: string | null) => {
                 setUnidadeId(v ?? "");
               }}
+              items={Object.fromEntries(unidades.map((u) => [u.id, u.nome]))}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione uma unidade" />

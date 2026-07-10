@@ -2,9 +2,17 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { NovaConversaDialog } from "@/components/chat/nova-conversa-dialog";
+import { SomToggle } from "@/components/chat/som-toggle";
 import { cn } from "@/lib/utils";
+import {
+  filtrarConversas,
+  parseFiltroConversas,
+  type FiltroConversas,
+} from "@/lib/chat/filtro-conversas";
 import type { ConversationWithCandidato } from "@/lib/chat/queries";
 
 // Normalize text for search: lowercase + strip diacritics
@@ -28,12 +36,32 @@ function relativeTime(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+const CHIPS: [FiltroConversas, string][] = [
+  ["todas", "Todas"],
+  ["nao-lidas", "Não lidas"],
+  ["minhas", "Minhas"],
+];
+
 interface Props {
   conversations: ConversationWithCandidato[];
   activeId: string | null;
+  vagas: string[];
+  unidades: { id: string; nome: string }[];
+  currentUserId: string | null;
 }
 
-export function ConversationList({ conversations, activeId }: Props) {
+export function ConversationList({
+  conversations,
+  activeId,
+  vagas,
+  unidades,
+  currentUserId,
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const filtro = parseFiltroConversas(searchParams.get("f"));
+
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,22 +77,41 @@ export function ConversationList({ conversations, activeId }: Props) {
   // Suppress unused-variable warning for tick (it drives re-render for relative times)
   void tick;
 
+  const setFiltro = (f: FiltroConversas) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (f === "todas") params.delete("f");
+    else params.set("f", f);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
+
+  // Mantém o chip ativo ao navegar entre conversas.
+  const hrefConversa = (id: string) =>
+    filtro === "todas" ? `/chat?c=${id}` : `/chat?c=${id}&f=${filtro}`;
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return conversations;
+    const porChip = filtrarConversas(conversations, filtro, currentUserId);
+    if (!query.trim()) return porChip;
     const q = normalize(query);
-    return conversations.filter((c) => {
+    return porChip.filter((c) => {
       const nome = normalize(c.candidatos?.nome ?? "");
       const preview = normalize(c.last_message_preview ?? "");
       const telefone = normalize(c.candidatos?.telefone ?? "");
       return nome.includes(q) || preview.includes(q) || telefone.includes(q);
     });
-  }, [conversations, query]);
+  }, [conversations, query, filtro, currentUserId]);
 
   return (
     <div className="flex h-full flex-col border-r border-neutro-200 bg-white">
       {/* Search header */}
       <div className="border-b border-neutro-200 p-3">
-        <h2 className="mb-2 font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
+          <div className="flex items-center gap-1.5">
+            <SomToggle />
+            <NovaConversaDialog vagas={vagas} unidades={unidades} />
+          </div>
+        </div>
         <input
           type="search"
           placeholder="Buscar candidato..."
@@ -72,6 +119,23 @@ export function ConversationList({ conversations, activeId }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           className="h-8 w-full rounded-md border border-neutro-200 bg-neutro-50 px-3 text-sm text-neutro-900 placeholder:text-neutro-700 focus:border-sapatao-verde focus:outline-none"
         />
+        <div className="mt-2 flex gap-1.5">
+          {CHIPS.map(([valor, rotulo]) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setFiltro(valor)}
+              className={cn(
+                "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
+                filtro === valor
+                  ? "border-sapatao-verde bg-sapatao-verde/10 text-sapatao-verde"
+                  : "border-neutro-200 text-neutro-700 hover:bg-neutro-50",
+              )}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* List */}
@@ -91,7 +155,7 @@ export function ConversationList({ conversations, activeId }: Props) {
             return (
               <Link
                 key={conv.id}
-                href={`/chat?c=${conv.id}`}
+                href={hrefConversa(conv.id)}
                 className={cn(
                   "flex items-start gap-3 border-b border-neutro-200 px-3 py-3 transition-colors hover:bg-neutro-50",
                   isActive && "bg-neutro-50 border-l-2 border-l-sapatao-verde",

@@ -1,6 +1,6 @@
 const EXT: Record<string, string> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
-  "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a",
+  "audio/ogg": "ogg", "audio/webm": "webm", "audio/mpeg": "mp3", "audio/mp4": "m4a",
   "video/mp4": "mp4",
   "application/pdf": "pdf",
   "application/msword": "doc",
@@ -12,7 +12,10 @@ function clean(mime: string | null): string {
 export function mimeToExt(mime: string | null): string {
   return EXT[clean(mime)] ?? "bin";
 }
-// Note: outbound audio is intentionally classified as 'audio' (file) in SP1c — 'ptt' (voice note) is out of scope.
+// Note: outbound audio defaults to 'audio' (file) classification here — a voice note
+// ('ptt') is opted into explicitly via the `voiceNote` flag threaded through
+// enviarMidia/sendMediaSchema, since MIME alone can't tell a recorded note from an
+// audio-file attachment (see SP6 gravar/enviar nota de voz).
 export function tipoFromMime(mime: string | null): "image" | "audio" | "video" | "document" {
   const m = clean(mime);
   if (m.startsWith("image/")) return "image";

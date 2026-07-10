@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/select";
 import { AgendarDialog } from "@/components/funil/agendar-dialog";
 import { ConfirmMoveDialog } from "@/components/funil/confirm-move-dialog";
+import {
+  EditarCandidatoDialog,
+  type CandidatoEditavel,
+} from "@/components/candidatos/editar-candidato-dialog";
 import { moverCandidatoAction } from "@/app/(app)/funil/actions";
+import { iniciarConversa, type Responsavel } from "@/app/(app)/candidatos/actions";
 import type { FunilEtapa } from "@/types/database";
 
 /** Action row of the ficha: abrir conversa, mover etapa (with confirmation on
@@ -28,6 +33,9 @@ export function FichaAcoes({
   etapas,
   canEdit,
   temEntrevista,
+  candidato,
+  vagas,
+  responsaveis,
 }: {
   candidatoId: string;
   nome: string;
@@ -36,6 +44,9 @@ export function FichaAcoes({
   etapas: FunilEtapa[];
   canEdit: boolean;
   temEntrevista: boolean;
+  candidato: CandidatoEditavel;
+  vagas: string[];
+  responsaveis: Responsavel[];
 }) {
   const router = useRouter();
   const [agendarOpen, setAgendarOpen] = useState(false);
@@ -66,17 +77,38 @@ export function FichaAcoes({
     doMove(paraEtapaId);
   };
 
+  const onIniciarConversa = () => {
+    startTransition(async () => {
+      const r = await iniciarConversa(candidatoId);
+      if (r.ok) router.push(`/chat?c=${r.conversationId}&tpl=saudacao`);
+      else toast.error("Não foi possível iniciar a conversa.");
+    });
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        render={conversationId ? <Link href={`/chat?c=${conversationId}`} /> : undefined}
-        disabled={!conversationId}
-      >
-        <MessagesSquare className="size-3.5" />
-        Abrir conversa
-      </Button>
+      {conversationId ? (
+        <Button size="sm" variant="outline" render={<Link href={`/chat?c=${conversationId}`} />}>
+          <MessagesSquare className="size-3.5" />
+          Abrir conversa
+        </Button>
+      ) : (
+        canEdit && (
+          <Button size="sm" variant="outline" onClick={onIniciarConversa} disabled={pending}>
+            <MessagesSquare className="size-3.5" />
+            Iniciar conversa
+          </Button>
+        )
+      )}
+
+      {canEdit && (
+        <EditarCandidatoDialog
+          candidato={candidato}
+          temConversa={!!conversationId}
+          vagas={vagas}
+          responsaveis={responsaveis}
+        />
+      )}
 
       {canEdit && (
         <Select value={null} onValueChange={(v: string | null) => { if (v) onMover(v); }}>

@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
-import type { Candidato, Conversation, Message } from "@/types/database";
+import type { Candidato, Conversation, Message, MessageTemplate } from "@/types/database";
 import { signedMediaUrls } from "./signed-url";
 
 // Conversations with embedded candidato data (PostgREST embed)
 export type ConversationWithCandidato = Conversation & {
-  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone"> | null;
+  candidatos: Pick<Candidato, "nome" | "avatar_url" | "tags" | "telefone" | "atribuido_a"> | null;
 };
 
 export type MessageWithSignedUrl = Message & { midia_signed_url: string | null };
@@ -21,7 +21,7 @@ export async function listConversations(): Promise<ConversationWithCandidato[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("conversations")
-    .select("*, candidatos(nome, avatar_url, tags, telefone)")
+    .select("*, candidatos(nome, avatar_url, tags, telefone, atribuido_a)")
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
   if (error) {
@@ -84,4 +84,20 @@ export async function loadCandidato(candidatoId: string): Promise<Candidato | nu
 export async function getEmpresaId(): Promise<string | null> {
   const profile = await getCurrentProfile();
   return profile?.empresa_id ?? null;
+}
+
+/** Templates de mensagem ativos da empresa (RLS-scoped), ordenados por categoria/nome. */
+export async function listTemplatesAtivos(): Promise<MessageTemplate[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("message_templates")
+    .select("*")
+    .eq("ativo", true)
+    .order("categoria", { ascending: true })
+    .order("nome", { ascending: true });
+  if (error) {
+    console.error("[chat/queries] listTemplatesAtivos error:", error);
+    return [];
+  }
+  return (data ?? []) as MessageTemplate[];
 }

@@ -5,7 +5,7 @@ import { sendMediaSchema } from "@/lib/validations/whatsapp";
 import { enviarMidia, type SendMediaDeps } from "@/lib/whatsapp/send-media";
 import { sendMedia as uazapiSendMedia } from "@/lib/uazapi/client";
 import { getUazapiConfig } from "@/lib/uazapi/config";
-import { mimeToExt, tipoFromMime } from "@/lib/whatsapp/media-helpers";
+import { mimeToExt } from "@/lib/whatsapp/media-helpers";
 
 function canSend(role: string, platformAdmin: boolean): boolean {
   return role === "admin" || role === "rh" || platformAdmin;
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid", issues: parsed.error.flatten() }, { status: 422 });
   }
-  const { conversationId, clientMessageId, fileBase64, mime, fileName, caption } = parsed.data;
+  const { conversationId, clientMessageId, fileBase64, mime, fileName, caption, voiceNote } = parsed.data;
   // Strip a possible data-URL prefix; UAZAPI + storage want raw base64.
   const rawB64 = fileBase64.replace(/^data:[^;]+;base64,/, "");
 
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
           empresa_id: row.empresaId,
           conversation_id: row.conversationId,
           direction: "outbound",
-          tipo: tipoFromMime(mime),
+          tipo: row.tipo,
           conteudo: row.caption ?? null,
           midia_url: row.midiaPath,
           midia_mime: mime,
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
   };
 
   const result = await enviarMidia(
-    { empresaId, conversationId, clientMessageId, senderId: profile.id, midiaPath, fileBase64: rawB64, mime, fileName, caption },
+    { empresaId, conversationId, clientMessageId, senderId: profile.id, midiaPath, fileBase64: rawB64, mime, fileName, caption, voiceNote },
     deps,
   );
 

@@ -85,3 +85,23 @@ export async function getEntrevistaVigente(candidatoId: string) {
   }
   return data;
 }
+
+/** Vagas de interesse distintas (não nulas) da empresa, para autocompletes. */
+export async function listVagasDistintas(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("candidatos")
+    .select("vaga_interesse")
+    .not("vaga_interesse", "is", null)
+    .order("vaga_interesse");
+  if (error) {
+    console.error("[candidatos/queries] listVagasDistintas error:", error);
+    return [];
+  }
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { vaga_interesse: string | null }[]) {
+    const v = r.vaga_interesse?.trim();
+    if (v) set.add(v);
+  }
+  return [...set];
+}

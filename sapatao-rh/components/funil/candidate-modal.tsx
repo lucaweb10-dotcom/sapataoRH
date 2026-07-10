@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,6 +23,7 @@ import { ParecerView } from "@/components/cv/parecer-view";
 import type { CandidatoFunil, HistoricoEntry } from "@/lib/funil/queries";
 import type { FunilEtapa, Entrevista } from "@/types/database";
 import { carregarHistorico, carregarEntrevista, moverCandidatoAction, salvarNotas } from "@/app/(app)/funil/actions";
+import { iniciarConversa } from "@/app/(app)/candidatos/actions";
 
 function Info({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (value === null || value === undefined || value === "") return null;
@@ -52,6 +54,7 @@ export function CandidateModal({
   const [agendarOpen, setAgendarOpen] = useState(false);
   const [confirmEtapa, setConfirmEtapa] = useState<FunilEtapa | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     if (!candidato) return;
@@ -105,6 +108,14 @@ export function CandidateModal({
       const r = await salvarNotas({ candidatoId: candidato.id, notas });
       if (r.ok) toast.success("Notas salvas.");
       else toast.error("Erro ao salvar notas.");
+    });
+  };
+
+  const onIniciarConversa = () => {
+    startTransition(async () => {
+      const r = await iniciarConversa(candidato.id);
+      if (r.ok) router.push(`/chat?c=${r.conversationId}&tpl=saudacao`);
+      else toast.error("Não foi possível iniciar a conversa.");
     });
   };
 
@@ -212,18 +223,21 @@ export function CandidateModal({
 
         {/* Ações */}
         <div className="flex flex-wrap items-center gap-2 border-t border-neutro-200 pt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            render={
-              candidato.conversationId ? (
-                <Link href={`/chat?c=${candidato.conversationId}`} />
-              ) : undefined
-            }
-            disabled={!candidato.conversationId}
-          >
-            Abrir conversa
-          </Button>
+          {candidato.conversationId ? (
+            <Button
+              size="sm"
+              variant="outline"
+              render={<Link href={`/chat?c=${candidato.conversationId}`} />}
+            >
+              Abrir conversa
+            </Button>
+          ) : (
+            canMove && (
+              <Button size="sm" variant="outline" onClick={onIniciarConversa} disabled={pending}>
+                Iniciar conversa
+              </Button>
+            )
+          )}
 
           <Button size="sm" variant="outline" render={<Link href={`/candidatos/${candidato.id}`} />}>
             Ver ficha

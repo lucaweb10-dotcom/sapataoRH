@@ -11,21 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STATUS_VALIDOS } from "@/lib/candidatos/filtros";
-import type { FunilEtapa } from "@/types/database";
-
-const STATUS_LABEL: Record<string, string> = {
-  ativo: "Ativo",
-  contratado: "Contratado",
-  reprovado: "Reprovado",
-  desistente: "Desistente",
-};
+import type { Responsavel } from "@/app/(app)/candidatos/actions";
 
 const TODOS = "todos";
+const MEUS = "me";
 
-/** URL-driven toolbar: busca (debounced), status e etapa. Changing any filter
- *  resets the page param so results always start at page 1. */
-export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
+/** Toolbar URL-driven do Kanban (?q= com debounce, ?vaga=, ?resp= com "Meus").
+ *  A unidade (?u=) é do seletor da topbar — "Limpar" não mexe nela. */
+export function FunilFiltros({
+  vagas,
+  responsaveis,
+}: {
+  vagas: string[];
+  responsaveis: Responsavel[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -34,9 +33,8 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
   const [q, setQ] = useState(qUrl);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Render-time sync: when the URL q changes from outside (back/forward,
-  // limpar), mirror it into the input — but ignore the echo of our own
-  // debounced update, or it would clobber in-flight typing.
+  // Render-time sync (padrão de filtros-bar.tsx): espelha o q da URL quando ele
+  // muda por fora (voltar/avançar, limpar), ignorando o eco do próprio debounce.
   const [qAplicado, setQAplicado] = useState(qUrl);
   const [prevQUrl, setPrevQUrl] = useState(qUrl);
   if (prevQUrl !== qUrl) {
@@ -53,7 +51,6 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
       if (value === null || value === "" || value === TODOS) params.delete(key);
       else params.set(key, value);
     }
-    params.delete("p");
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
@@ -67,63 +64,65 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
     }, 350);
   };
 
-  const status = searchParams.get("status") ?? TODOS;
-  const etapa = searchParams.get("etapa") ?? TODOS;
-  const temFiltro = qUrl !== "" || status !== TODOS || etapa !== TODOS;
+  const vaga = searchParams.get("vaga") ?? TODOS;
+  const resp = searchParams.get("resp") ?? TODOS;
+  const temFiltro = qUrl !== "" || vaga !== TODOS || resp !== TODOS;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative w-full max-w-xs">
+      <div className="relative w-full max-w-56">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-neutro-500" />
         <Input
           value={q}
           onChange={(e) => onBusca(e.target.value)}
-          placeholder="Buscar por nome ou telefone…"
+          placeholder="Buscar nome ou telefone…"
           className="pl-8"
-          aria-label="Buscar candidato por nome ou telefone"
+          aria-label="Buscar candidato no funil"
         />
       </div>
 
-      <Select
-        value={status}
-        items={{ [TODOS]: "Todos os status", ...STATUS_LABEL }}
-        onValueChange={(v: string | null) => aplicar({ status: v })}
-      >
-        <SelectTrigger size="sm" aria-label="Filtrar por status">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={TODOS}>Todos os status</SelectItem>
-          {STATUS_VALIDOS.map((s) => (
-            <SelectItem key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {etapas.length > 0 && (
+      {vagas.length > 0 && (
         <Select
-          value={etapa}
-          items={{
-            [TODOS]: "Todas as etapas",
-            ...Object.fromEntries(etapas.map((e) => [e.id, e.nome])),
-          }}
-          onValueChange={(v: string | null) => aplicar({ etapa: v })}
+          value={vaga}
+          onValueChange={(v: string | null) => aplicar({ vaga: v })}
+          items={{ [TODOS]: "Todas as vagas", ...Object.fromEntries(vagas.map((v) => [v, v])) }}
         >
-          <SelectTrigger size="sm" aria-label="Filtrar por etapa">
+          <SelectTrigger size="sm" aria-label="Filtrar por vaga">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={TODOS}>Todas as etapas</SelectItem>
-            {etapas.map((e) => (
-              <SelectItem key={e.id} value={e.id}>
-                {e.nome}
+            <SelectItem value={TODOS}>Todas as vagas</SelectItem>
+            {vagas.map((v) => (
+              <SelectItem key={v} value={v}>
+                {v}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       )}
+
+      <Select
+        value={resp}
+        onValueChange={(v: string | null) => aplicar({ resp: v })}
+        items={{
+          [TODOS]: "Todos os responsáveis",
+          [MEUS]: "Meus",
+          ...Object.fromEntries(responsaveis.map((r) => [r.id, r.nome])),
+        }}
+      >
+        <SelectTrigger size="sm" aria-label="Filtrar por responsável">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={TODOS}>Todos os responsáveis</SelectItem>
+          <SelectItem value={MEUS}>Meus</SelectItem>
+          {responsaveis.map((r) => (
+            <SelectItem key={r.id} value={r.id}>
+              {r.nome}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {temFiltro && (
         <Button
@@ -133,7 +132,7 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
             if (debounce.current) clearTimeout(debounce.current);
             setQAplicado("");
             setQ("");
-            router.replace(pathname);
+            aplicar({ q: null, vaga: null, resp: null });
           }}
         >
           <X className="size-3.5" />
