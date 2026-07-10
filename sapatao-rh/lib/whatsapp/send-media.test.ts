@@ -24,6 +24,14 @@ describe("enviarMidia", () => {
     expect(deps.sendMedia).toHaveBeenCalledWith("TKN", "5551999999999", expect.objectContaining({ type: "document", fileBase64: "QkFTRTY0", mimetype: "application/pdf", docName: "cv.pdf", caption: "Meu currículo" }));
     expect(deps.updateResult).toHaveBeenCalledWith("msg-1", { status: "sent", uazapi_msg_id: "PROV-1" });
   });
+  it("voiceNote: true forces tipo 'ptt' on insert and sendMedia", async () => {
+    const deps = makeDeps();
+    const r = await enviarMidia({ ...input, mime: "audio/webm", voiceNote: true }, deps);
+    expect(r.ok).toBe(true);
+    expect(deps.insertQueued).toHaveBeenCalledWith(expect.objectContaining({ tipo: "ptt" }));
+    expect(deps.sendMedia).toHaveBeenCalledWith("TKN", "5551999999999", expect.objectContaining({ type: "ptt" }));
+  });
+
   it("idempotent no-op for an existing non-failed row", async () => {
     const deps = makeDeps({ findByClientId: vi.fn(async () => ({ id: "m", status: "sent" as MessageStatus })) });
     const r = await enviarMidia(input, deps);

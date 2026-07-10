@@ -2,9 +2,34 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { FileText } from "lucide-react";
+import { FileText, Mic, Send, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useSendQueue } from "@/stores/send-queue";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
+
+/** MIME types tried in order for MediaRecorder — first one the browser supports wins. */
+const AUDIO_MIME_CANDIDATES = [
+  "audio/ogg;codecs=opus",
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4",
+];
+
+function pickAudioMimeType(): string {
+  if (typeof MediaRecorder === "undefined") return "";
+  for (const candidate of AUDIO_MIME_CANDIDATES) {
+    if (MediaRecorder.isTypeSupported(candidate)) return candidate;
+  }
+  return "";
+}
+
+function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 export type TemplatePronto = {
   id: string;
@@ -30,6 +55,114 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // ── Voice note recording ────────────────────────────────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const cancelledRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function stopTimer() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }
+
+  function releaseStream() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }
+
+  // Always release the mic + clear the timer on unmount, whatever state we were in.
+  useEffect(() => {
+    return () => {
+      stopTimer();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        cancelledRef.current = true;
+        mediaRecorderRef.current.stop();
+      }
+      releaseStream();
+    };
+  }, []);
+
+  async function sendRecording(chunks: Blob[], recordedMimeType: string) {
+    if (chunks.length === 0) return;
+    const mime = (recordedMimeType || "audio/webm").split(";")[0];
+    const blob = new Blob(chunks, { type: mime });
+    const objectUrl = URL.createObjectURL(blob);
+
+    const buf = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let b64 = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      b64 += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    const fileBase64 = btoa(b64);
+
+    const clientMessageId = crypto.randomUUID();
+    const fileName = `audio-${Date.now()}.${
+      mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : "webm"
+    }`;
+
+    enqueueAndRun(
+      { clientMessageId, conversationId, texto: "", media: { objectUrl, mime, fileName } },
+      () => dispatchSendMedia({ clientMessageId, conversationId, fileBase64, mime, fileName, voiceNote: true }),
+    );
+  }
+
+  async function handleStartRecording() {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      toast.error("Não foi possível acessar o microfone.");
+      return;
+    }
+
+    const mimeType = pickAudioMimeType();
+    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    chunksRef.current = [];
+    cancelledRef.current = false;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      releaseStream();
+      stopTimer();
+      const chunks = chunksRef.current;
+      chunksRef.current = [];
+      if (cancelledRef.current) return;
+      void sendRecording(chunks, recorder.mimeType || mimeType);
+    };
+
+    streamRef.current = stream;
+    mediaRecorderRef.current = recorder;
+    recorder.start();
+
+    setRecordingSeconds(0);
+    setIsRecording(true);
+    intervalRef.current = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+  }
+
+  function handleCancelRecording() {
+    cancelledRef.current = true;
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  }
+
+  function handleFinishRecording() {
+    cancelledRef.current = false;
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  }
 
   function autoGrow(el: HTMLTextAreaElement) {
     el.style.height = "auto";
@@ -159,17 +292,47 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
 
   return (
     <div className="border-t border-neutro-200 bg-white p-3">
-      <div className="flex items-end gap-2">
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,.pdf,.doc,.docx"
-          multiple
-          className="hidden"
-          onChange={handleFileChange}
-        />
+      {/* Hidden file input — stays mounted regardless of recording state */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.doc,.docx"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
+      {isRecording ? (
+        <div className="flex items-center gap-3 rounded-lg border border-neutro-200 bg-neutro-50 px-3 py-2">
+          <span className="relative flex h-3 w-3 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+          </span>
+          <span className="font-mono text-sm tabular-nums text-neutro-900">
+            {formatDuration(recordingSeconds)}
+          </span>
+          <span className="flex-1 text-sm text-neutro-500">Gravando áudio...</span>
+          <button
+            type="button"
+            aria-label="Cancelar gravação"
+            title="Cancelar gravação"
+            onClick={handleCancelRecording}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutro-200 bg-white text-neutro-700 transition-colors hover:bg-neutro-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sapatao-verde/50 active:translate-y-px"
+          >
+            <Trash2 className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Enviar áudio"
+            title="Enviar áudio"
+            onClick={handleFinishRecording}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sapatao-verde text-white transition-colors hover:bg-sapatao-verde/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-sapatao-verde/50 active:translate-y-px"
+          >
+            <Send className="size-4" />
+          </button>
+        </div>
+      ) : (
+      <div className="flex items-end gap-2">
         {/* Picker de templates */}
         {templates.length > 0 && (
           <div className="relative mb-px">
@@ -231,6 +394,17 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
           </svg>
         </button>
 
+        {/* Microfone / gravar nota de voz */}
+        <button
+          type="button"
+          aria-label="Gravar nota de voz"
+          title="Gravar nota de voz"
+          onClick={handleStartRecording}
+          className="mb-px flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutro-200 bg-neutro-50 text-neutro-700 transition-colors hover:bg-neutro-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sapatao-verde/50 active:translate-y-px"
+        >
+          <Mic className="size-4" />
+        </button>
+
         <textarea
           ref={textareaRef}
           rows={2}
@@ -256,6 +430,7 @@ export function Composer({ conversationId, prefill = null, templates = [] }: Pro
           </svg>
         </button>
       </div>
+      )}
     </div>
   );
 }

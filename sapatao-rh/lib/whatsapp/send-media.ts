@@ -6,7 +6,7 @@ export interface SendMediaDeps {
   isOptedOut: (telefone: string) => Promise<boolean>;
   findByClientId: (clientMessageId: string) => Promise<{ id: string; status: MessageStatus } | null>;
   insertQueued: (row: {
-    empresaId: string; conversationId: string; tipo: string; midiaPath: string; caption?: string; clientMessageId: string; senderId: string;
+    empresaId: string; conversationId: string; tipo: "image" | "video" | "audio" | "ptt" | "document"; midiaPath: string; caption?: string; clientMessageId: string; senderId: string;
   }) => Promise<{ id: string | null; error: { code?: string; message?: string } | null }>;
   /** Atomic claim: flips status queued only if the row was still failed (rows-affected === 1 → claimed:true). */
   reuseFailed: (messageId: string) => Promise<{ claimed: boolean; error: { message?: string } | null }>;
@@ -27,6 +27,7 @@ export interface SendMediaInput {
   mime: string;
   fileName?: string;
   caption?: string;
+  voiceNote?: boolean;
 }
 
 export type SendResult =
@@ -47,7 +48,7 @@ export async function enviarMidia(input: SendMediaInput, deps: SendMediaDeps): P
     return { ok: false, error: "optout" };
   }
 
-  const tipo = tipoFromMime(input.mime);
+  const tipo = input.voiceNote ? "ptt" : tipoFromMime(input.mime);
 
   let messageId: string;
   if (existing && existing.status === "failed") {

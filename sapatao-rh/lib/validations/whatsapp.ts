@@ -25,6 +25,7 @@ export const sendMediaSchema = z.object({
   mime: z.string().min(1),
   fileName: z.string().optional(),
   caption: z.string().optional(),
+  voiceNote: z.boolean().optional(),
 });
 export type SendMediaInputDTO = z.infer<typeof sendMediaSchema>;
 

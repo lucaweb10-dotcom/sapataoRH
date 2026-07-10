@@ -271,7 +271,11 @@ function QueueMediaContent({ item, isOutbound }: { item: QueueItem; isOutbound: 
     );
   }
 
-  // document / audio / etc — show file name card
+  if (mime.startsWith("audio/")) {
+    return <audio controls src={objectUrl} className="max-w-[240px]" />;
+  }
+
+  // document / etc — show file name card
   return (
     <div className="flex items-center gap-2">
       <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />

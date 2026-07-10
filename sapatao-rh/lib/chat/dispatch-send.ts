@@ -30,6 +30,7 @@ export async function dispatchSendMedia(payload: {
   mime: string;
   fileName?: string;
   caption?: string;
+  voiceNote?: boolean;
 }): Promise<{ ok: true }> {
   const res = await fetch("/api/whatsapp/send-media", {
     method: "POST",
