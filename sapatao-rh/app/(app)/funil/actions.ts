@@ -28,6 +28,24 @@ export async function moverCandidatoAction(input: {
   if (!parsed.success) return { ok: false, error: "not_found" };
 
   const supabase = await createClient();
+
+  // SP7 (multi-funil): mover manual não pode cruzar funis por acidente (UI
+  // stale desfaria uma migração de unidade). Troca de funil = definirUnidade.
+  const [{ data: candFunil }, { data: etapaDestino }] = await Promise.all([
+    supabase.from("candidatos").select("etapa_id").eq("id", parsed.data.candidatoId).maybeSingle(),
+    supabase.from("funil_etapas").select("funil_id").eq("id", parsed.data.paraEtapaId).maybeSingle(),
+  ]);
+  if (candFunil?.etapa_id && etapaDestino?.funil_id) {
+    const { data: etapaAtual } = await supabase
+      .from("funil_etapas")
+      .select("funil_id")
+      .eq("id", candFunil.etapa_id)
+      .maybeSingle();
+    if (etapaAtual?.funil_id && etapaAtual.funil_id !== etapaDestino.funil_id) {
+      return { ok: false, error: "cross_funil" };
+    }
+  }
+
   const deps: MoverDeps = {
     getCandidato: async (id) => {
       const { data } = await supabase

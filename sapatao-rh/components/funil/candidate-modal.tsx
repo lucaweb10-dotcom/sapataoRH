@@ -207,8 +207,8 @@ export function CandidateModal({
               <ul className="space-y-1.5">
                 {historico.map((h) => (
                   <li key={h.id} className="text-xs text-neutro-700">
-                    <span className="text-neutro-900">{nomeEtapa(h.de_etapa)}</span> →{" "}
-                    <span className="text-neutro-900">{nomeEtapa(h.para_etapa)}</span>
+                    <span className="text-neutro-900">{h.de_etapa_nome ?? nomeEtapa(h.de_etapa)}</span> →{" "}
+                    <span className="text-neutro-900">{h.para_etapa_nome ?? nomeEtapa(h.para_etapa)}</span>
                     {h.movido_por_nome && <> · {h.movido_por_nome}</>}
                     <span className="text-neutro-700">
                       {" "}

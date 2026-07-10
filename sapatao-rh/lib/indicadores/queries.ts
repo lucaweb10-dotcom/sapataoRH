@@ -57,26 +57,54 @@ export async function getResumoIndicadores(periodo: PeriodoFiltro): Promise<Resu
 export async function getSnapshotFunil(): Promise<EtapaSnapshot[]> {
   const supabase = await createClient();
 
-  const [{ data: etapas }, { data: candidatos }] = await Promise.all([
-    supabase.from("funil_etapas").select("id, nome, cor, ordem, sla_dias").order("ordem"),
-    supabase
-      .from("candidatos")
-      .select("etapa_id, etapa_entrou_em")
-      .eq("status", "ativo"),
+  // SP7 (funis por unidade): o snapshot é da EMPRESA — agrega candidatos de
+  // todos os funis POR NOME de etapa, usando as etapas do funil Geral como
+  // linhas canônicas (ordem/cor/SLA). Etapas exclusivas de funis de unidade
+  // (renomeadas) entram como linhas extras no fim.
+  const [{ data: funis }, { data: etapas }, { data: candidatos }] = await Promise.all([
+    supabase.from("funis").select("id, is_default"),
+    supabase.from("funil_etapas").select("id, nome, cor, ordem, sla_dias, funil_id").order("ordem"),
+    supabase.from("candidatos").select("etapa_id, etapa_entrou_em").eq("status", "ativo"),
   ]);
 
+  const normalizar = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  const defaultFunilId = (funis ?? []).find((f) => f.is_default)?.id ?? null;
+  const todas = etapas ?? [];
+  // dedup por nome NORMALIZADO também nas canônicas (nomes homônimos no Geral
+  // contariam o mesmo grupo duas vezes)
+  const vistosCanonicos = new Set<string>();
+  const canonicas = (defaultFunilId ? todas.filter((e) => e.funil_id === defaultFunilId) : todas).filter(
+    (e) => {
+      const chave = normalizar(e.nome);
+      if (vistosCanonicos.has(chave)) return false;
+      vistosCanonicos.add(chave);
+      return true;
+    },
+  );
+
+  const nomePorEtapaId = new Map<string, string>();
+  for (const e of todas) nomePorEtapaId.set(e.id, normalizar(e.nome));
+
   const totalAtivos = (candidatos ?? []).length;
-  const porEtapa = new Map<string, { etapa_entrou_em: string | null }[]>();
+  const porNome = new Map<string, { etapa_entrou_em: string | null }[]>();
   for (const c of candidatos ?? []) {
     if (!c.etapa_id) continue;
-    const lista = porEtapa.get(c.etapa_id) ?? [];
+    const nome = nomePorEtapaId.get(c.etapa_id);
+    if (!nome) continue;
+    const lista = porNome.get(nome) ?? [];
     lista.push({ etapa_entrou_em: c.etapa_entrou_em ?? null });
-    porEtapa.set(c.etapa_id, lista);
+    porNome.set(nome, lista);
   }
 
   const agora = new Date();
-  return (etapas ?? []).map((e) => {
-    const grupo = porEtapa.get(e.id) ?? [];
+  const linha = (e: { id: string; nome: string; cor: string; ordem: number; sla_dias: number | null }) => {
+    const grupo = porNome.get(normalizar(e.nome)) ?? [];
     const total = grupo.length;
     const sla = calcularSlaStatus(
       grupo.map((g) => g.etapa_entrou_em),
@@ -94,7 +122,25 @@ export async function getSnapshotFunil(): Promise<EtapaSnapshot[]> {
       sla_dentro: sla.dentro,
       sla_fora: sla.fora,
     };
+  };
+
+  const nomesCanonicos = new Set(canonicas.map((e) => normalizar(e.nome)));
+  const extras = todas.filter(
+    (e) => !nomesCanonicos.has(normalizar(e.nome)) && (porNome.get(normalizar(e.nome)) ?? []).length > 0,
+  );
+  // dedup extras por nome normalizado (fica a 1ª ocorrência)
+  const vistos = new Set<string>();
+  const extrasUnicas = extras.filter((e) => {
+    const chave = normalizar(e.nome);
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
   });
+
+  return [
+    ...canonicas.map(linha),
+    ...extrasUnicas.map((e, i) => ({ ...linha(e), ordem: 1000 + i })),
+  ];
 }
 
 export async function getEntradasSemanais(nSemanas = 8): Promise<SemanaEntry[]> {

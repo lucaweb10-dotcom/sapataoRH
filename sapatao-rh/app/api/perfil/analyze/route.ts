@@ -80,7 +80,7 @@ export async function POST(req: Request) {
   const { data: cand } = await supabase
     .from("candidatos")
     .select(
-      "id, empresa_id, etapa_id, nome, telefone, vaga_interesse, idade, cep, endereco, tem_veiculo, tags, notas_internas",
+      "id, empresa_id, etapa_id, unidade_id, nome, telefone, vaga_interesse, idade, cep, endereco, tem_veiculo, tags, notas_internas",
     )
     .eq("id", conv.candidato_id)
     .maybeSingle();
@@ -221,6 +221,17 @@ export async function POST(req: Request) {
         { empresaId: cand.empresa_id, candidatoId, etapaAtualId: cand.etapa_id },
         {
           getFunilDefault: async (empresaId) => {
+            // SP7: funil da UNIDADE do candidato (se houver), senão o Geral.
+            if (cand.unidade_id) {
+              const { data: daUnidade } = await supabase
+                .from("funis")
+                .select("id")
+                .eq("empresa_id", empresaId)
+                .eq("unidade_id", cand.unidade_id)
+                .eq("ativo", true)
+                .maybeSingle();
+              if (daUnidade) return daUnidade;
+            }
             const { data } = await supabase
               .from("funis")
               .select("id")

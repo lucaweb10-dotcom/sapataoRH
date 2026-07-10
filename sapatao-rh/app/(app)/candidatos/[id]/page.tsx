@@ -12,7 +12,7 @@ import { TempoChip } from "@/components/candidatos/tempo-chip";
 import { ParecerView, type ParecerOrigem } from "@/components/cv/parecer-view";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
-import { getFunilComEtapas, getHistorico } from "@/lib/funil/queries";
+import { getFunilDoCandidato, getHistorico, listTodasEtapas } from "@/lib/funil/queries";
 import { getCandidatoFicha, getEntrevistaVigente, listVagasDistintas } from "@/lib/candidatos/queries";
 import { getFuncionarioDoCandidato } from "@/lib/funcionarios/queries";
 import { listarResponsaveis } from "@/app/(app)/candidatos/actions";
@@ -57,15 +57,19 @@ export default async function CandidatoFichaPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [candidato, funil, historico, entrevista, vagas, responsaveis] = await Promise.all([
+  const [candidato, todasEtapas, historico, entrevista, vagas, responsaveis] = await Promise.all([
     getCandidatoFicha(id),
-    getFunilComEtapas(),
+    listTodasEtapas(),
     getHistorico(id),
     getEntrevistaVigente(id) as Promise<Entrevista | null>,
     listVagasDistintas(),
     listarResponsaveis(),
   ]);
   if (!candidato) notFound();
+
+  // SP7: as ações de mover usam o funil ONDE o candidato está (não o Geral);
+  // nomes de etapa (header/histórico) resolvem em qualquer funil.
+  const funil = await getFunilDoCandidato(candidato.etapa_id, candidato.unidade_id);
 
   // Contratado → promoção a funcionário (PRD 9.5).
   const funcionarioVinculado =
@@ -94,9 +98,9 @@ export default async function CandidatoFichaPage({
   }
 
   const etapas = funil?.etapas ?? [];
-  const etapaAtual = etapas.find((e) => e.id === candidato.etapa_id) ?? null;
+  const etapaAtual = todasEtapas.find((e) => e.id === candidato.etapa_id) ?? null;
   const nomeEtapa = (etapaId: string | null) =>
-    etapas.find((e) => e.id === etapaId)?.nome ?? "—";
+    todasEtapas.find((e) => e.id === etapaId)?.nome ?? "—";
   const canEdit = profile.platform_admin || profile.role === "admin" || profile.role === "rh";
 
   return (

@@ -8,7 +8,7 @@ import { NovoCandidatoDialog } from "@/components/candidatos/novo-candidato-dial
 import { CandidatosTabela, type EtapaInfo } from "@/components/candidatos/tabela";
 import { PaginacaoNav } from "@/components/shared/paginacao-nav";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
-import { getFunilComEtapas } from "@/lib/funil/queries";
+import { getFunilComEtapas, listTodasEtapas } from "@/lib/funil/queries";
 import { parseFiltros } from "@/lib/candidatos/filtros";
 import { listCandidatos, listVagasDistintas } from "@/lib/candidatos/queries";
 import { totalPaginas, resumoPaginacao } from "@/lib/shared/paginacao";
@@ -28,17 +28,25 @@ export default async function CandidatosPage({
   const filtros = parseFiltros(sp);
 
   const supabase = await createClient();
-  const [funil, lista, vagas, unidadesRes] = await Promise.all([
+  const [funil, todasEtapas, lista, vagas, unidadesRes] = await Promise.all([
     getFunilComEtapas(),
+    listTodasEtapas(),
     listCandidatos(filtros),
     listVagasDistintas(),
-    supabase.from("unidades").select("id, nome").eq("ativa", true).order("nome"),
+    supabase
+      .from("unidades")
+      .select("id, nome")
+      .eq("empresa_id", profile.empresa_id)
+      .eq("ativa", true)
+      .order("nome"),
   ]);
   const unidades = (unidadesRes.data ?? []) as { id: string; nome: string }[];
   const canCreate = profile.platform_admin || profile.role === "admin" || profile.role === "rh";
+  // Filtro de etapa usa o funil Geral; os NOMES na tabela resolvem em qualquer
+  // funil (SP7 — candidatos podem estar em funis de unidade).
   const etapas = funil?.etapas ?? [];
   const etapasById: Record<string, EtapaInfo> = {};
-  for (const e of etapas) etapasById[e.id] = { nome: e.nome, cor: e.cor };
+  for (const e of todasEtapas) etapasById[e.id] = { nome: e.nome, cor: e.cor };
 
   const { rows, total } = lista;
   const temFiltro = filtros.q !== "" || filtros.status !== null || filtros.etapaId !== null;

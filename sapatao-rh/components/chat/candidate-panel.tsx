@@ -15,6 +15,7 @@ import { ConfirmMoveDialog } from "@/components/funil/confirm-move-dialog";
 import { EditarCandidatoDialog } from "@/components/candidatos/editar-candidato-dialog";
 import { ParecerView, type ParecerOrigem } from "@/components/cv/parecer-view";
 import { AnalisarPerfilButton, type CargoOpcao } from "@/components/chat/analisar-perfil-button";
+import { UnidadeSelect, type UnidadeOpcao } from "@/components/candidatos/unidade-select";
 import { moverCandidatoAction } from "@/app/(app)/funil/actions";
 import {
   atualizarCandidato,
@@ -31,6 +32,8 @@ interface Props {
   vagas: string[];
   responsaveis: Responsavel[];
   canEdit: boolean;
+  /** SP7: unidades ativas p/ o select de unidade (troca migra o card de funil). */
+  unidades?: UnidadeOpcao[];
   // IA (SP3b) — opcionais: outros usos do panel não quebram.
   conversationId?: string;
   viewerCanAnalisar?: boolean;
@@ -59,6 +62,7 @@ export function CandidatePanel({
   vagas,
   responsaveis,
   canEdit,
+  unidades,
   conversationId,
   viewerCanAnalisar,
   viewerIsAdmin,
@@ -145,7 +149,10 @@ export function CandidatePanel({
       <div className="flex items-center justify-between gap-2 border-b border-neutro-200 p-4">
         <h3 className="font-display text-sm font-semibold text-neutro-900">Candidato</h3>
         <div className="flex items-center gap-3">
-          <Link href="/funil" className="text-xs font-medium text-brand-700 hover:underline">
+          <Link
+            href={candidato.unidade_id ? `/funil?u=${candidato.unidade_id}` : "/funil"}
+            className="text-xs font-medium text-brand-700 hover:underline"
+          >
             Ver no funil
           </Link>
           <Link
@@ -257,6 +264,16 @@ export function CandidatePanel({
             </p>
           )}
         </div>
+
+        {/* Unidade (SP7 — trocar migra o card p/ o funil da unidade) */}
+        {unidades && unidades.length > 0 && (
+          <UnidadeSelect
+            candidatoId={candidato.id}
+            unidadeAtualId={candidato.unidade_id}
+            unidades={unidades}
+            canEdit={canEdit}
+          />
+        )}
 
         {/* Tags (chips editáveis) */}
         <div>

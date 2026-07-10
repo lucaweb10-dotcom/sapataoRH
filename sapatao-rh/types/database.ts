@@ -159,6 +159,8 @@ export type Funil = Timestamps & {
   ordem: number;
   is_default: boolean;
   ativo: boolean;
+  /** null = funil Geral da empresa (template); senão, funil exclusivo da unidade. */
+  unidade_id: string | null;
 };
 
 export type FunilEtapa = Timestamps & {

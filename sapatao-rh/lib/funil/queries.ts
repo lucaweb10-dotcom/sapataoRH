@@ -30,6 +30,9 @@ export type HistoricoEntry = {
   id: string;
   de_etapa: string | null;
   para_etapa: string | null;
+  /** Nomes resolvidos server-side em QUALQUER funil (SP7 — migração entre funis). */
+  de_etapa_nome: string | null;
+  para_etapa_nome: string | null;
   observacao: string | null;
   created_at: string;
   movido_por_nome: string | null;
@@ -57,6 +60,81 @@ export async function getFunilComEtapas(funilId?: string): Promise<FunilComEtapa
     return { funil, etapas: [] };
   }
   return { funil, etapas: (etapas ?? []) as FunilEtapa[] };
+}
+
+export type FunilResumo = Pick<Funil, "id" | "nome" | "is_default" | "unidade_id"> & {
+  unidadeNome: string | null;
+};
+
+/** Todos os funis ativos da empresa (Geral primeiro, depois por nome da unidade). */
+export async function listFunis(): Promise<FunilResumo[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("funis")
+    .select("id, nome, is_default, unidade_id, unidades(nome)")
+    .eq("ativo", true);
+  if (error) {
+    console.error("[funil/queries] listFunis error:", error);
+    return [];
+  }
+  type Row = Pick<Funil, "id" | "nome" | "is_default" | "unidade_id"> & {
+    unidades: { nome: string } | null;
+  };
+  return ((data ?? []) as unknown as Row[])
+    .map(({ unidades, ...rest }) => ({ ...rest, unidadeNome: unidades?.nome ?? null }))
+    .sort((a, b) => {
+      if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+      return (a.unidadeNome ?? a.nome).localeCompare(b.unidadeNome ?? b.nome);
+    });
+}
+
+/** Funil da unidade (se ela tiver um próprio e ativo); senão o Geral (default). */
+export async function getFunilDaUnidade(unidadeId: string | null): Promise<FunilComEtapas | null> {
+  if (unidadeId) {
+    const supabase = await createClient();
+    const { data: funil } = await supabase
+      .from("funis")
+      .select("*")
+      .eq("unidade_id", unidadeId)
+      .eq("ativo", true)
+      .maybeSingle<Funil>();
+    if (funil) return getFunilComEtapas(funil.id);
+  }
+  return getFunilComEtapas();
+}
+
+/** O funil ONDE o candidato está: o dono da etapa dele; sem etapa → o funil
+ *  da unidade dele; sem ambos → o Geral. Usado por telas que mostram/movem a
+ *  etapa de UM candidato (painel do chat, ficha). */
+export async function getFunilDoCandidato(
+  etapaId: string | null,
+  unidadeId: string | null,
+): Promise<FunilComEtapas | null> {
+  if (etapaId) {
+    const supabase = await createClient();
+    const { data: etapa } = await supabase
+      .from("funil_etapas")
+      .select("funil_id")
+      .eq("id", etapaId)
+      .maybeSingle();
+    if (etapa?.funil_id) return getFunilComEtapas(etapa.funil_id);
+  }
+  return getFunilDaUnidade(unidadeId);
+}
+
+/** Todas as etapas da empresa (todos os funis) — p/ resolver nome/cor de etapas
+ *  de candidatos espalhados por vários funis (lista/ficha/histórico). */
+export async function listTodasEtapas(): Promise<FunilEtapa[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("funil_etapas")
+    .select("*")
+    .order("ordem", { ascending: true });
+  if (error) {
+    console.error("[funil/queries] listTodasEtapas error:", error);
+    return [];
+  }
+  return (data ?? []) as FunilEtapa[];
 }
 
 export type FiltrosBoard = {
@@ -116,9 +194,26 @@ export async function getHistorico(candidatoId: string): Promise<HistoricoEntry[
     console.error("[funil/queries] getHistorico error:", error);
     return [];
   }
-  type Row = Omit<HistoricoEntry, "movido_por_nome"> & { profiles: { nome: string } | null };
-  return ((data ?? []) as unknown as Row[]).map((r) => {
+  type Row = Omit<HistoricoEntry, "movido_por_nome" | "de_etapa_nome" | "para_etapa_nome"> & {
+    profiles: { nome: string } | null;
+  };
+  const rows = (data ?? []) as unknown as Row[];
+
+  // Resolve nomes de etapa de QUALQUER funil (migração de unidade cruza funis).
+  const ids = [...new Set(rows.flatMap((r) => [r.de_etapa, r.para_etapa]).filter((v): v is string => !!v))];
+  const nomes = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: etapas } = await supabase.from("funil_etapas").select("id, nome").in("id", ids);
+    for (const e of etapas ?? []) nomes.set(e.id, e.nome);
+  }
+
+  return rows.map((r) => {
     const { profiles, ...rest } = r;
-    return { ...rest, movido_por_nome: profiles?.nome ?? null };
+    return {
+      ...rest,
+      de_etapa_nome: r.de_etapa ? (nomes.get(r.de_etapa) ?? null) : null,
+      para_etapa_nome: r.para_etapa ? (nomes.get(r.para_etapa) ?? null) : null,
+      movido_por_nome: profiles?.nome ?? null,
+    };
   });
 }

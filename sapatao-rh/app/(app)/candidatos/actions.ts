@@ -10,6 +10,12 @@ import {
   type AtualizarCandidatoInput,
 } from "@/lib/validations/candidatos";
 import { buscaOr } from "@/lib/candidatos/filtros";
+import {
+  mapearEtapaEquivalente,
+  statusAposMigracao,
+  type EtapaMapeavel,
+} from "@/lib/funil/migrar-unidade";
+import type { Candidato, Funil } from "@/types/database";
 
 function canWrite(role: string, platformAdmin: boolean): boolean {
   return platformAdmin || role === "admin" || role === "rh";
@@ -153,6 +159,158 @@ export async function iniciarConversa(
 
   revalidatePath("/chat");
   return { ok: true, conversationId: data.id };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Define/troca a unidade do candidato e MIGRA o card para a etapa equivalente
+ *  do funil da nova unidade (SP7 — decisão do usuário: marcador > nome > posição).
+ *  unidadeId null = sem unidade → funil Geral. Auditoria em kanban_history. */
+export async function definirUnidade(
+  candidatoId: string,
+  unidadeId: string | null,
+): Promise<{ ok: true; migrou: boolean } | { ok?: false; error: string }> {
+  const profile = await getCurrentProfile();
+  if (!profile || !canWrite(profile.role, profile.platform_admin)) return { error: "forbidden" };
+  if (!UUID_RE.test(candidatoId) || (unidadeId !== null && !UUID_RE.test(unidadeId)))
+    return { error: "invalido" };
+
+  const supabase = await createClient();
+  const { data: cand } = await supabase
+    .from("candidatos")
+    .select("id, empresa_id, etapa_id, unidade_id")
+    .eq("id", candidatoId)
+    .maybeSingle();
+  if (!cand) return { error: "not_found" };
+  if (cand.unidade_id === unidadeId) return { ok: true, migrou: false };
+
+  // Unidade precisa ser da empresa do candidato (RLS já escopa; defense-in-depth).
+  if (unidadeId) {
+    const { data: uni } = await supabase
+      .from("unidades")
+      .select("id")
+      .eq("id", unidadeId)
+      .eq("empresa_id", cand.empresa_id)
+      .maybeSingle();
+    if (!uni) return { error: "not_found" };
+  }
+
+  // Funil de destino: da nova unidade (se tiver um próprio ativo) ou o Geral.
+  let destino: Funil | null = null;
+  if (unidadeId) {
+    const { data } = await supabase
+      .from("funis")
+      .select("*")
+      .eq("empresa_id", cand.empresa_id)
+      .eq("unidade_id", unidadeId)
+      .eq("ativo", true)
+      .maybeSingle<Funil>();
+    destino = data;
+  }
+  if (!destino) {
+    const { data } = await supabase
+      .from("funis")
+      .select("*")
+      .eq("empresa_id", cand.empresa_id)
+      .eq("is_default", true)
+      .maybeSingle<Funil>();
+    destino = data;
+  }
+
+  // Funil de origem = o dono da etapa atual do candidato.
+  let funilOrigemId: string | null = null;
+  if (cand.etapa_id) {
+    const { data: etapaAtual } = await supabase
+      .from("funil_etapas")
+      .select("funil_id")
+      .eq("id", cand.etapa_id)
+      .maybeSingle();
+    funilOrigemId = etapaAtual?.funil_id ?? null;
+  }
+
+  // Mesmo funil (ou sem funil de destino) → só troca o rótulo da unidade.
+  if (!destino || destino.id === funilOrigemId) {
+    const { data, error } = await supabase
+      .from("candidatos")
+      .update({ unidade_id: unidadeId })
+      .eq("id", candidatoId)
+      .eq("empresa_id", cand.empresa_id)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("[candidatos/actions] definirUnidade:", error);
+      return { error: "db" };
+    }
+    if (!data) return { error: "not_found" };
+    revalidar(candidatoId);
+    return { ok: true, migrou: false };
+  }
+
+  const CAMPOS_ETAPA = "id, nome, ordem, marcador, is_terminal, status_destino";
+  const [{ data: etapasOrigem }, { data: etapasDestino }, { data: unidadeNomeRow }] =
+    await Promise.all([
+      funilOrigemId
+        ? supabase.from("funil_etapas").select(CAMPOS_ETAPA).eq("funil_id", funilOrigemId)
+        : Promise.resolve({ data: [] as EtapaMapeavel[] }),
+      supabase.from("funil_etapas").select(CAMPOS_ETAPA).eq("funil_id", destino.id),
+      unidadeId
+        ? supabase.from("unidades").select("nome").eq("id", unidadeId).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+  const destinoEtapas = (etapasDestino ?? []) as EtapaMapeavel[];
+  const novaEtapa = mapearEtapaEquivalente(
+    cand.etapa_id,
+    (etapasOrigem ?? []) as EtapaMapeavel[],
+    destinoEtapas,
+  );
+
+  const patch: Partial<Candidato> = { unidade_id: unidadeId };
+  const migrou = novaEtapa !== null && novaEtapa !== cand.etapa_id;
+  if (migrou) {
+    patch.etapa_id = novaEtapa;
+    patch.etapa_entrou_em = new Date().toISOString();
+    // Status é TOTAL (mesma regra do mover): terminal → status_destino; senão ativo.
+    const status = statusAposMigracao(destinoEtapas.find((e) => e.id === novaEtapa));
+    if (status) patch.status = status as Candidato["status"];
+  }
+  const { data: updated, error } = await supabase
+    .from("candidatos")
+    .update(patch)
+    .eq("id", candidatoId)
+    .eq("empresa_id", cand.empresa_id)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[candidatos/actions] definirUnidade:", error);
+    return { error: "db" };
+  }
+  if (!updated) return { error: "not_found" };
+
+  if (migrou) {
+    const destinoNome = unidadeId
+      ? `funil da unidade ${(unidadeNomeRow as { nome: string } | null)?.nome ?? "selecionada"}`
+      : "funil Geral";
+    const { error: histErr } = await supabase.from("kanban_history").insert({
+      empresa_id: cand.empresa_id, // carimba a empresa do candidato (não a do ator)
+      candidato_id: candidatoId,
+      de_etapa: cand.etapa_id,
+      para_etapa: novaEtapa,
+      movido_por: profile.id,
+      observacao: `Migrado para o ${destinoNome}`,
+    });
+    if (histErr) console.error("[candidatos/actions] definirUnidade history:", histErr);
+  }
+
+  revalidar(candidatoId);
+  return { ok: true, migrou };
+}
+
+function revalidar(candidatoId: string) {
+  revalidatePath("/candidatos");
+  revalidatePath(`/candidatos/${candidatoId}`);
+  revalidatePath("/funil");
+  revalidatePath("/chat");
 }
 
 /** Profiles ativos da empresa com papel admin/rh (selects de responsável). */

@@ -7,7 +7,7 @@ import {
   getEmpresaId,
   type ThreadResult,
 } from "@/lib/chat/queries";
-import { getFunilComEtapas } from "@/lib/funil/queries";
+import { getFunilDoCandidato, type FunilComEtapas } from "@/lib/funil/queries";
 import { listTemplatesAtivos } from "@/lib/chat/queries";
 import { preencherTemplate } from "@/lib/whatsapp/templates";
 import { listVagasDistintas } from "@/lib/candidatos/queries";
@@ -39,13 +39,17 @@ export default async function ChatPage({
   const tplCategoria = typeof tpl === "string" ? tpl : null;
 
   const supabase = await createClient();
-  const [empresaId, conversations, funil, vagas, responsaveis, unidadesRes] = await Promise.all([
+  const [empresaId, conversations, vagas, responsaveis, unidadesRes] = await Promise.all([
     getEmpresaId(),
     listConversations(),
-    getFunilComEtapas(),
     listVagasDistintas(),
     listarResponsaveis(),
-    supabase.from("unidades").select("id, nome").eq("ativa", true).order("nome"),
+    supabase
+      .from("unidades")
+      .select("id, nome")
+      .eq("empresa_id", profile.empresa_id)
+      .eq("ativa", true)
+      .order("nome"),
   ]);
   const unidades = (unidadesRes.data ?? []) as { id: string; nome: string }[];
 
@@ -60,6 +64,7 @@ export default async function ChatPage({
   let activeCandidato: Candidato | null = null;
   let cargosIa: CargoIa[] = [];
   let parecerOrigem: ParecerOrigem | null = null;
+  let funil: FunilComEtapas | null = null;
   if (displayedConv) {
     const [threadResult, candidato, cargos] = await Promise.all([
       loadThread(displayedConv.id),
@@ -69,6 +74,9 @@ export default async function ChatPage({
     thread = threadResult;
     activeCandidato = candidato;
     cargosIa = cargos;
+
+    // SP7: as etapas do painel são do funil ONDE o candidato está (não o Geral).
+    funil = await getFunilDoCandidato(candidato?.etapa_id ?? null, candidato?.unidade_id ?? null);
 
     // Origem do parecer exibido (última análise ok — SP3b).
     if (candidato?.parecer_ia) {
@@ -172,6 +180,7 @@ export default async function ChatPage({
             vagas={vagas}
             responsaveis={responsaveis}
             canEdit={canEdit}
+            unidades={unidades}
             conversationId={displayedConvId ?? undefined}
             viewerCanAnalisar={canEdit}
             viewerIsAdmin={viewerIsAdmin}

@@ -25,7 +25,9 @@ export interface MoverInput {
   observacao?: string;
 }
 
-export type MoverResult = { ok: true } | { ok: false; error: "not_found" | "cross_tenant" | "update_failed" };
+export type MoverResult =
+  | { ok: true }
+  | { ok: false; error: "not_found" | "cross_tenant" | "cross_funil" | "update_failed" };
 
 /**
  * Moves a candidato to a target stage (write-first), then logs kanban_history.
