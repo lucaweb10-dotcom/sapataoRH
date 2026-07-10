@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Candidato } from "@/types/database";
-import { ParecerView } from "@/components/cv/parecer-view";
+import { ParecerView, type ParecerOrigem } from "@/components/cv/parecer-view";
+import { AnalisarPerfilButton, type CargoOpcao } from "@/components/chat/analisar-perfil-button";
 
 interface Props {
   candidato: Pick<
@@ -16,6 +17,13 @@ interface Props {
     | "parecer_ia"
     | "status"
   >;
+  // SP3b (opcionais — outros usos do panel não quebram):
+  conversationId?: string;
+  viewerCanAnalisar?: boolean;
+  viewerIsAdmin?: boolean;
+  cargosIa?: CargoOpcao[];
+  cargoSugeridoId?: string | null;
+  parecerOrigem?: ParecerOrigem | null;
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
@@ -28,7 +36,15 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   );
 }
 
-export function CandidatePanel({ candidato }: Props) {
+export function CandidatePanel({
+  candidato,
+  conversationId,
+  viewerCanAnalisar,
+  viewerIsAdmin,
+  cargosIa,
+  cargoSugeridoId,
+  parecerOrigem,
+}: Props) {
   return (
     <div className="flex h-full flex-col overflow-y-auto border-l border-neutro-200 bg-white">
       {/* Header */}
@@ -78,9 +94,19 @@ export function CandidatePanel({ candidato }: Props) {
         )}
 
         {/* Análise de IA */}
-        <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-3">
-          <p className="mb-2 text-xs font-medium text-neutro-700">Análise de IA</p>
-          <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} />
+        <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-3 space-y-3">
+          <p className="text-xs font-medium text-neutro-700">Análise de IA</p>
+          {conversationId && (
+            <AnalisarPerfilButton
+              conversationId={conversationId}
+              jaTemParecer={!!candidato.parecer_ia}
+              canAnalisar={!!viewerCanAnalisar}
+              isAdmin={!!viewerIsAdmin}
+              cargos={cargosIa ?? []}
+              cargoSugeridoId={cargoSugeridoId ?? null}
+            />
+          )}
+          <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} origem={parecerOrigem} />
         </div>
       </div>
     </div>

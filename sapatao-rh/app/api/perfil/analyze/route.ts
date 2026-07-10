@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { analisarCurriculo, type AnaliseDeps, type AnaliseErro } from "@/lib/cv/analise";
+import { analisarPerfil, type PerfilDeps, type PerfilErro, type PerfilMensagem } from "@/lib/perfil/analise";
 import { extractCvText } from "@/lib/cv/extract-text";
 import {
   getCriterios,
@@ -16,23 +16,23 @@ import { getIaConfig } from "@/lib/llm/config";
 import { LlmError } from "@/lib/llm/types";
 import { limiteExcedido, tokensUsadosNoMes } from "@/lib/llm/limite";
 import { custoUsd } from "@/lib/llm/modelos";
+import { transcreverPendentes } from "@/lib/chat/transcricao";
+import { transcreverAudio } from "@/lib/llm/transcribe";
 import { moverParaIaConcluida } from "@/lib/funil/mover-ia";
-import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
-import { analyzeSchema } from "@/lib/validations/cv";
-import { PARECER_JSON_SCHEMA, type Parecer } from "@/lib/cv/parecer";
+import { perfilAnalyzeSchema } from "@/lib/validations/perfil";
+import type { Message } from "@/types/database";
 
-export const runtime = "nodejs"; // pdf-parse / mammoth precisam do runtime Node
-export const maxDuration = 120;
+export const runtime = "nodejs"; // mammoth/pdf precisam do runtime Node
+export const maxDuration = 120; // transcrições + LLM podem passar de 30s na 1ª análise
 
 const BUCKET = "whatsapp-media";
+const MAX_MENSAGENS = 500;
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+const MAX_IMG_BYTES = 5 * 1024 * 1024;
 
-const ERRO_HTTP: Record<AnaliseErro | "limite_excedido" | "cargo_indefinido", { status: number; message: string }> = {
-  arquivo_invalido: { status: 422, message: "Não foi possível ler o arquivo. Envie o currículo em PDF ou DOCX." },
-  texto_vazio: { status: 422, message: "O currículo não contém texto legível para análise." },
-  cargo_indefinido: {
-    status: 422,
-    message: "Defina a vaga de interesse do candidato ou analise pelo painel do chat escolhendo o cargo.",
-  },
+const ERRO_HTTP: Record<PerfilErro | "cargo_indefinido", { status: number; message: string }> = {
+  sem_mensagens: { status: 422, message: "Esta conversa ainda não tem conteúdo suficiente para análise." },
+  cargo_indefinido: { status: 422, message: "Escolha o cargo da análise." },
   chave_invalida: {
     status: 422,
     message: "Chave da OpenAI ausente ou inválida. Configure em Configurações → IA.",
@@ -58,50 +58,42 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => null);
-  const parsed = analyzeSchema.safeParse(body);
+  const parsed = perfilAnalyzeSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "bad_request", message: "messageId inválido." }, { status: 400 });
+    return NextResponse.json({ error: "bad_request", message: "conversationId inválido." }, { status: 400 });
   }
 
   const supabase = await createClient();
 
-  // mensagem -> anexo + conversa (RLS escopa por empresa)
-  const { data: msg } = await supabase
-    .from("messages")
-    .select("midia_url, midia_mime, conversation_id")
-    .eq("id", parsed.data.messageId)
-    .maybeSingle();
-  if (!msg || !msg.midia_url || !isAnalisavelCv(msg.midia_mime)) {
-    return NextResponse.json(
-      { error: "arquivo_invalido", message: "Mensagem sem currículo analisável (PDF ou DOCX)." },
-      { status: 422 },
-    );
-  }
-
   const { data: conv } = await supabase
     .from("conversations")
-    .select("candidato_id")
-    .eq("id", msg.conversation_id ?? "")
+    .select("id, candidato_id, empresa_id")
+    .eq("id", parsed.data.conversationId)
     .maybeSingle();
   if (!conv?.candidato_id) {
-    return NextResponse.json({ error: "arquivo_invalido", message: "Conversa sem candidato." }, { status: 422 });
+    return NextResponse.json(
+      { error: "sem_mensagens", message: "Conversa não encontrada ou sem candidato." },
+      { status: 404 },
+    );
   }
 
   const { data: cand } = await supabase
     .from("candidatos")
-    .select("id, empresa_id, vaga_interesse, etapa_id")
+    .select(
+      "id, empresa_id, etapa_id, nome, telefone, vaga_interesse, idade, cep, endereco, tem_veiculo, tags, notas_internas",
+    )
     .eq("id", conv.candidato_id)
     .maybeSingle();
   if (!cand) {
-    return NextResponse.json({ error: "arquivo_invalido", message: "Candidato não encontrado." }, { status: 422 });
+    return NextResponse.json({ error: "sem_mensagens", message: "Candidato não encontrado." }, { status: 422 });
   }
-  // Defesa em profundidade (espelha send/send-media): usuário comum só age na própria
-  // empresa. Toda escrita abaixo é carimbada com cand.empresa_id (não a do ator).
+  // Defesa em profundidade: usuário comum só age na própria empresa; escritas são
+  // carimbadas com cand.empresa_id (não a do ator).
   if (!profile.platform_admin && cand.empresa_id !== profile.empresa_id) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  // Cargo da análise (SP3b): explícito > match pela vaga de interesse > geral.
+  // Cargo da análise: explícito > match pela vaga de interesse > geral.
   let cargo: CargoIa | null = null;
   if (parsed.data.cargoId) {
     const { data: row } = await supabase
@@ -120,7 +112,7 @@ export async function POST(req: Request) {
     cargo = resolvido.tipo === "match" || resolvido.tipo === "unico" ? resolvido.cargo : null;
   }
 
-  // Config de IA da empresa (service role: a API key não tem grant p/ authenticated).
+  // Config de IA (service role: a API key não tem grant p/ authenticated).
   const admin = createAdminClient();
   const cfg = await getIaConfig(admin, cand.empresa_id);
   let llm;
@@ -131,21 +123,66 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  // Limite mensal ANTES de qualquer chamada paga.
-  if (limiteExcedido(await tokensUsadosNoMes(admin, cand.empresa_id), cfg.limiteTokensMes)) {
-    return erroJson("limite_excedido");
-  }
+  const baixar = async (path: string): Promise<{ buffer: Buffer; mime: string } | null> => {
+    const { data, error } = await supabase.storage.from(BUCKET).download(path);
+    if (error || !data) return null;
+    return { buffer: Buffer.from(await data.arrayBuffer()), mime: data.type || "application/octet-stream" };
+  };
 
-  const deps: AnaliseDeps = {
-    getCvFile: async (path) => {
-      const { data, error } = await supabase.storage.from(BUCKET).download(path);
-      if (error || !data) return null;
-      const buffer = Buffer.from(await data.arrayBuffer());
-      return { buffer, mime: msg.midia_mime ?? "application/octet-stream" };
+  const deps: PerfilDeps = {
+    getMensagens: async (conversationId) => {
+      // mais recentes primeiro + reverse: conversas gigantes mantêm a cauda recente.
+      const { data } = await supabase
+        .from("messages")
+        .select("id, direction, tipo, conteudo, midia_url, midia_mime, metadata, transcricao, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: false })
+        .limit(MAX_MENSAGENS);
+      const rows = (data ?? []) as Pick<
+        Message,
+        "id" | "direction" | "tipo" | "conteudo" | "midia_url" | "midia_mime" | "metadata" | "transcricao" | "created_at"
+      >[];
+      return rows.reverse() as PerfilMensagem[];
     },
-    extractText: extractCvText,
+    checarLimite: async () => ({
+      excedido: limiteExcedido(await tokensUsadosNoMes(admin, cand.empresa_id), cfg.limiteTokensMes),
+    }),
+    transcreverPendentes: async (audios) => {
+      // Provider mock: sem transcrição (placeholders) — e2e/dev sem chave funciona.
+      if (cfg.provider !== "openai" || !cfg.apiKey) {
+        return { porMensagem: new Map<string, string>(), tokens: 0 };
+      }
+      const apiKey = cfg.apiKey;
+      return transcreverPendentes(audios, {
+        baixarAudio: baixar,
+        transcrever: (audio) => transcreverAudio({ apiKey }, audio),
+        salvarCache: async (messageId, texto) => {
+          const { error } = await supabase.from("messages").update({ transcricao: texto }).eq("id", messageId);
+          return { error };
+        },
+      });
+    },
+    getDocumentoTexto: async (path, mime) => {
+      const file = await baixar(path);
+      if (!file) return null;
+      try {
+        return await extractCvText(file.buffer, mime);
+      } catch {
+        return null;
+      }
+    },
+    getAnexoPdf: async (path, nome) => {
+      const file = await baixar(path);
+      if (!file || file.buffer.length > MAX_PDF_BYTES) return null;
+      return { kind: "pdf", mime: "application/pdf", base64: file.buffer.toString("base64"), nome };
+    },
+    getAnexoImagem: async (path, mime) => {
+      const file = await baixar(path);
+      if (!file || file.buffer.length > MAX_IMG_BYTES) return null;
+      return { kind: "image", mime, base64: file.buffer.toString("base64") };
+    },
     getCriterios,
-    llmJson: (system, user) => llm.completeJson(system, user, { jsonSchema: PARECER_JSON_SCHEMA }),
+    llmJson: (system, user, opts) => llm.completeJson(system, user, opts),
     persist: async (candidatoId, score, parecer) => {
       const { error } = await supabase
         .from("candidatos")
@@ -157,30 +194,30 @@ export async function POST(req: Request) {
       return { error };
     },
     registrarAnalise: async (log) => {
-      const tokensIn = log.tokensIn ?? null;
-      const tokensOut = log.tokensOut ?? null;
       const { error } = await supabase.from("cv_analises").insert({
-        empresa_id: cand.empresa_id, // carimba a empresa do candidato (não a do ator)
+        empresa_id: cand.empresa_id,
         candidato_id: cand.id,
-        message_id: parsed.data.messageId,
-        conversation_id: msg.conversation_id,
-        origem: "cv",
+        message_id: null,
+        conversation_id: conv.id,
+        origem: "perfil",
         cargo_nome: cargo?.nome ?? null,
         score: log.score,
         parecer: (log.parecer as unknown as Record<string, unknown>) ?? null,
         modelo: llm.modelo,
         tokens_est: log.tokensEst,
-        tokens_in: tokensIn,
-        tokens_out: tokensOut,
+        tokens_in: log.tokensIn,
+        tokens_out: log.tokensOut,
         custo_usd:
-          tokensIn !== null && tokensOut !== null ? custoUsd(llm.modelo, tokensIn, tokensOut) : null,
+          log.tokensIn !== null && log.tokensOut !== null
+            ? custoUsd(llm.modelo, log.tokensIn, log.tokensOut)
+            : null,
         status: log.status,
         movido_por: profile.id,
       });
       return { error };
     },
-    moverParaAnaliseConcluida: async (candidatoId) => {
-      await moverParaIaConcluida(
+    moverParaAnaliseConcluida: (candidatoId) =>
+      moverParaIaConcluida(
         { empresaId: cand.empresa_id, candidatoId, etapaAtualId: cand.etapa_id },
         {
           getFunilDefault: async (empresaId) => {
@@ -219,26 +256,34 @@ export async function POST(req: Request) {
             return { error };
           },
         },
-      );
-    },
+      ),
   };
 
   let result;
   try {
-    result = await analisarCurriculo(
+    result = await analisarPerfil(
       {
         empresaId: cand.empresa_id,
         candidatoId: cand.id,
-        cvPath: msg.midia_url,
-        vagaInteresse: cand.vaga_interesse,
+        conversationId: conv.id,
+        candidato: {
+          nome: cand.nome ?? "não informado",
+          telefone: cand.telefone,
+          vaga_interesse: cand.vaga_interesse,
+          idade: cand.idade,
+          cep: cand.cep,
+          endereco: cand.endereco,
+          tem_veiculo: cand.tem_veiculo,
+          tags: cand.tags ?? [],
+          notas_internas: cand.notas_internas,
+        },
         cargo,
         movidoPor: profile.id,
       },
       deps,
     );
   } catch (err) {
-    // Nenhum caminho deve vazar um 500 não-mapeado.
-    console.error("[cv/analyze] erro inesperado:", err);
+    console.error("[perfil/analyze] erro inesperado:", err);
     return erroJson("persist_falhou");
   }
 
@@ -246,7 +291,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       score: result.score,
-      parecer: result.parecer satisfies Parecer,
+      movido: result.movido,
       cargo: cargo?.nome ?? null,
     });
   }

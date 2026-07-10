@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toStrictJsonSchema } from "@/lib/llm/json-schema";
 
 /** Structured CV analysis returned by the LLM (mirrors PRD §7.5). */
 export const parecerSchema = z.object({
@@ -21,6 +22,12 @@ export const parecerSchema = z.object({
 });
 
 export type Parecer = z.infer<typeof parecerSchema>;
+
+/** Strict JSON Schema do parecer p/ structured outputs da Responses API. */
+export const PARECER_JSON_SCHEMA = {
+  name: "parecer",
+  schema: toStrictJsonSchema(parecerSchema),
+};
 
 /** Parses + validates the LLM's JSON text. Returns null on any parse/schema failure. */
 export function parseParecer(jsonText: string): Parecer | null {

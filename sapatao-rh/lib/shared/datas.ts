@@ -12,3 +12,14 @@ export function hojeIso(): string {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
+
+export const TZ_BR = "America/Sao_Paulo";
+
+/** "dd/mm/aaaa às HH:mm" de um timestamp ISO, SEMPRE no fuso do Brasil —
+ *  determinístico entre server e browser (evita hydration mismatch). */
+export function dataHoraBr(iso: string): string {
+  const d = new Date(iso);
+  const data = d.toLocaleDateString("pt-BR", { timeZone: TZ_BR });
+  const hora = d.toLocaleTimeString("pt-BR", { timeZone: TZ_BR, hour: "2-digit", minute: "2-digit" });
+  return `${data} às ${hora}`;
+}

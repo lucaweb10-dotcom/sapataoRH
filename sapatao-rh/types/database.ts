@@ -128,6 +128,7 @@ export type Message = {
   sender_id: string | null;
   reply_to_provider_id: string | null;
   metadata: Record<string, unknown>;
+  transcricao: string | null;
   enviada_em: string;
   lida_em: string | null;
   created_at: string;
@@ -189,8 +190,20 @@ export type IaCriterios = Timestamps & {
   id: string;
   empresa_id: string;
   prompt_base: string;
-  criterios: string[];
+  // v1 (legado): array de strings; v2: objeto {versao:2, ...} de critérios gerais.
+  criterios: string[] | Record<string, unknown>;
   modelo: string;
+  provider: "mock" | "openai" | null;
+  openai_api_key: string | null;
+  limite_tokens_mes: number | null;
+};
+
+export type IaCargo = Timestamps & {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  criterios: Record<string, unknown>;
+  ativo: boolean;
 };
 
 export type CvAnalise = {
@@ -198,11 +211,17 @@ export type CvAnalise = {
   empresa_id: string;
   candidato_id: string;
   message_id: string | null;
+  conversation_id: string | null;
   score: number | null;
   parecer: Record<string, unknown> | null;
   modelo: string | null;
   tokens_est: number | null;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  custo_usd: number | null;
   status: string;
+  origem: "cv" | "perfil";
+  cargo_nome: string | null;
   movido_por: string | null;
   created_at: string;
 };
@@ -355,6 +374,12 @@ export interface Database {
         Update: Partial<IaCriterios>;
         Relationships: [];
       };
+      ia_cargos: {
+        Row: IaCargo;
+        Insert: Partial<IaCargo> & { empresa_id: string; nome: string };
+        Update: Partial<IaCargo>;
+        Relationships: [];
+      };
       cv_analises: {
         Row: CvAnalise;
         Insert: Partial<CvAnalise> & { empresa_id: string; candidato_id: string; status: string };
@@ -391,6 +416,8 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
+    // Manter Record<string, never>: tipar Functions degrada a inferência de embeds
+    // do supabase-js (SelectQueryError em selects com relação). RPCs usam cast.
     Functions: Record<string, never>;
     Enums: Record<string, never>;
   };

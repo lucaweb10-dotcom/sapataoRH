@@ -1,6 +1,7 @@
 "use client";
 import { parecerSchema, type Parecer } from "@/lib/cv/parecer";
 import { scoreFaixa } from "@/lib/funil/scoring";
+import { dataHoraBr } from "@/lib/shared/datas";
 
 const FAIXA_COR: Record<string, string> = {
   sem: "text-neutro-700",
@@ -29,14 +30,33 @@ function Lista({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+export interface ParecerOrigem {
+  fonte: "cv" | "perfil";
+  quando: string;
+  modelo: string | null;
+  cargo: string | null;
+}
+
+function origemLabel(o: ParecerOrigem): string {
+  const partes = [
+    o.fonte === "perfil" ? "Análise do perfil da conversa" : "Análise do currículo anexado",
+    ...(o.cargo ? [o.cargo] : []),
+    dataHoraBr(o.quando), // fuso fixo BR: mesmo output no SSR e no browser
+    ...(o.modelo ? [o.modelo] : []),
+  ];
+  return partes.join(" · ");
+}
+
 /** Structured render of a CV analysis. Validates `parecer` defensively (it is
  *  stored as free jsonb), so old/partial data degrades to the empty state. */
 export function ParecerView({
   parecer,
   score,
+  origem,
 }: {
   parecer: Record<string, unknown> | null;
   score: number | null;
+  origem?: ParecerOrigem | null;
 }) {
   const parsed = parecer ? parecerSchema.safeParse(parecer) : null;
   if (!parsed || !parsed.success) {
@@ -79,6 +99,10 @@ export function ParecerView({
       )}
 
       <Lista title="Perguntas para entrevista" items={p.perguntas_sugeridas_entrevista} />
+
+      {origem && (
+        <p className="border-t border-neutro-200 pt-2 text-[11px] text-neutro-500">{origemLabel(origem)}</p>
+      )}
     </div>
   );
 }

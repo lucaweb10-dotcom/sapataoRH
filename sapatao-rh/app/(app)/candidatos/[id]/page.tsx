@@ -9,7 +9,8 @@ import { StatusBadge } from "@/components/candidatos/status-badge";
 import { FichaAcoes } from "@/components/candidatos/ficha-acoes";
 import { NotasCard } from "@/components/candidatos/notas-card";
 import { TempoChip } from "@/components/candidatos/tempo-chip";
-import { ParecerView } from "@/components/cv/parecer-view";
+import { ParecerView, type ParecerOrigem } from "@/components/cv/parecer-view";
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilComEtapas, getHistorico } from "@/lib/funil/queries";
 import { getCandidatoFicha, getEntrevistaVigente } from "@/lib/candidatos/queries";
@@ -66,6 +67,28 @@ export default async function CandidatoFichaPage({
   // Contratado → promoção a funcionário (PRD 9.5).
   const funcionarioVinculado =
     candidato.status === "contratado" ? await getFuncionarioDoCandidato(id) : null;
+
+  // Origem do parecer exibido (última análise ok — SP3b).
+  let parecerOrigem: ParecerOrigem | null = null;
+  if (candidato.parecer_ia) {
+    const supabase = await createClient();
+    const { data: ultimaOk } = await supabase
+      .from("cv_analises")
+      .select("origem, cargo_nome, modelo, created_at")
+      .eq("candidato_id", id)
+      .eq("status", "ok")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (ultimaOk) {
+      parecerOrigem = {
+        fonte: ultimaOk.origem === "perfil" ? "perfil" : "cv",
+        quando: ultimaOk.created_at,
+        modelo: ultimaOk.modelo,
+        cargo: ultimaOk.cargo_nome,
+      };
+    }
+  }
 
   const etapas = funil?.etapas ?? [];
   const etapaAtual = etapas.find((e) => e.id === candidato.etapa_id) ?? null;
@@ -192,7 +215,7 @@ export default async function CandidatoFichaPage({
 
         <div className="space-y-4">
           <Secao titulo="Análise de IA">
-            <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} />
+            <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} origem={parecerOrigem} />
             {candidato.curriculo_url && (
               <a
                 href={candidato.curriculo_url}

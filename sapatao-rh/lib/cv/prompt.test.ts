@@ -5,6 +5,7 @@ import type { Criterios } from "./criterios";
 const criterios: Criterios = {
   prompt_base: "Você é um analista de RH.",
   criterios: ["Idade ≥18", "Tem veículo"],
+  gerais: null,
   modelo: "mock",
 };
 

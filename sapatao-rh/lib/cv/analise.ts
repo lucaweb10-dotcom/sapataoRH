@@ -1,10 +1,12 @@
+import { LlmError } from "@/lib/llm/types";
 import { buildCvPrompt } from "./prompt";
 import { parseParecer, type Parecer } from "./parecer";
-import type { Criterios } from "./criterios";
+import type { CargoIa, Criterios } from "./criterios";
 
 export type AnaliseErro =
   | "arquivo_invalido"
   | "texto_vazio"
+  | "chave_invalida"
   | "ia_indisponivel"
   | "parecer_invalido"
   | "persist_falhou";
@@ -16,13 +18,18 @@ export interface AnaliseLog {
   score: number | null;
   parecer: Parecer | null;
   tokensEst: number | null;
+  tokensIn?: number | null;
+  tokensOut?: number | null;
 }
 
 export interface AnaliseDeps {
   getCvFile: (path: string) => Promise<{ buffer: Buffer; mime: string } | null>;
   extractText: (buffer: Buffer, mime: string) => Promise<string>;
   getCriterios: (empresaId: string) => Promise<Criterios>;
-  llmJson: (system: string, user: string) => Promise<{ json: string; tokensEst: number }>;
+  llmJson: (
+    system: string,
+    user: string,
+  ) => Promise<{ json: string; tokensEst: number; tokensIn?: number; tokensOut?: number }>;
   persist: (candidatoId: string, score: number, parecer: Parecer) => Promise<{ error: unknown | null }>;
   registrarAnalise: (row: AnaliseLog) => Promise<{ error: unknown | null }>;
   moverParaAnaliseConcluida: (candidatoId: string) => Promise<void>;
@@ -33,6 +40,8 @@ export interface AnaliseInput {
   candidatoId: string;
   cvPath: string;
   vagaInteresse: string | null;
+  /** Cargo de avaliação (SP3b); null/ausente = avaliação geral. */
+  cargo?: CargoIa | null;
   movidoPor: string;
 }
 
@@ -70,19 +79,32 @@ export async function analisarCurriculo(input: AnaliseInput, deps: AnaliseDeps):
   }
 
   const criterios = await deps.getCriterios(input.empresaId);
-  const { system, user } = buildCvPrompt(criterios, input.vagaInteresse, texto);
+  const { system, user } = buildCvPrompt(criterios, input.vagaInteresse, texto, input.cargo ?? null);
 
-  let llmOut: { json: string; tokensEst: number };
+  let llmOut: { json: string; tokensEst: number; tokensIn?: number; tokensOut?: number };
   try {
     llmOut = await deps.llmJson(system, user);
-  } catch {
-    await safeLog(deps, { status: "ia_indisponivel", score: null, parecer: null, tokensEst: null });
-    return { ok: false, error: "ia_indisponivel" };
+  } catch (err) {
+    // 401 da OpenAI não é "indisponível" — é chave errada, e a UI trata diferente.
+    const status: AnaliseErro =
+      err instanceof LlmError && err.code === "chave_invalida" ? "chave_invalida" : "ia_indisponivel";
+    await safeLog(deps, { status, score: null, parecer: null, tokensEst: null });
+    return { ok: false, error: status };
   }
+
+  const tokensIn = llmOut.tokensIn ?? null;
+  const tokensOut = llmOut.tokensOut ?? null;
 
   const parecer = parseParecer(llmOut.json);
   if (!parecer) {
-    await safeLog(deps, { status: "parecer_invalido", score: null, parecer: null, tokensEst: llmOut.tokensEst });
+    await safeLog(deps, {
+      status: "parecer_invalido",
+      score: null,
+      parecer: null,
+      tokensEst: llmOut.tokensEst,
+      tokensIn,
+      tokensOut,
+    });
     return { ok: false, error: "parecer_invalido" };
   }
 
@@ -93,11 +115,25 @@ export async function analisarCurriculo(input: AnaliseInput, deps: AnaliseDeps):
     p = { error: new Error("persist rejeitou") };
   }
   if (p.error) {
-    await safeLog(deps, { status: "persist_falhou", score: parecer.score, parecer, tokensEst: llmOut.tokensEst });
+    await safeLog(deps, {
+      status: "persist_falhou",
+      score: parecer.score,
+      parecer,
+      tokensEst: llmOut.tokensEst,
+      tokensIn,
+      tokensOut,
+    });
     return { ok: false, error: "persist_falhou" };
   }
 
-  await safeLog(deps, { status: "ok", score: parecer.score, parecer, tokensEst: llmOut.tokensEst });
+  await safeLog(deps, {
+    status: "ok",
+    score: parecer.score,
+    parecer,
+    tokensEst: llmOut.tokensEst,
+    tokensIn,
+    tokensOut,
+  });
   try {
     await deps.moverParaAnaliseConcluida(input.candidatoId);
   } catch {

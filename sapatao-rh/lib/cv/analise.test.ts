@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { analisarCurriculo, type AnaliseDeps } from "./analise";
+import { LlmError } from "@/lib/llm/types";
 
 const validParecer = {
   score: 72,
@@ -24,7 +25,7 @@ function makeDeps(over: Partial<AnaliseDeps> = {}): AnaliseDeps {
   return {
     getCvFile: vi.fn(async () => ({ buffer: Buffer.from("pdf"), mime: "application/pdf" })),
     extractText: vi.fn(async () => "texto do curriculo"),
-    getCriterios: vi.fn(async () => ({ prompt_base: "b", criterios: ["x"], modelo: "mock" })),
+    getCriterios: vi.fn(async () => ({ prompt_base: "b", criterios: ["x"], gerais: null, modelo: "mock" })),
     llmJson: vi.fn(async () => ({ json: JSON.stringify(validParecer), tokensEst: 100 })),
     persist: vi.fn(async () => ({ error: null })),
     registrarAnalise: vi.fn(async () => ({ error: null })),
@@ -73,6 +74,16 @@ describe("analisarCurriculo", () => {
       }),
     });
     expect(await analisarCurriculo(input, deps)).toEqual({ ok: false, error: "ia_indisponivel" });
+  });
+
+  it("LLM lança LlmError chave_invalida -> chave_invalida (não vira ia_indisponivel)", async () => {
+    const deps = makeDeps({
+      llmJson: vi.fn(async () => {
+        throw new LlmError("chave_invalida");
+      }),
+    });
+    expect(await analisarCurriculo(input, deps)).toEqual({ ok: false, error: "chave_invalida" });
+    expect(deps.registrarAnalise).toHaveBeenCalledWith(expect.objectContaining({ status: "chave_invalida" }));
   });
 
   it("JSON inválido -> parecer_invalido (não persiste)", async () => {
