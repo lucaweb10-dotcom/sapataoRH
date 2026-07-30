@@ -125,27 +125,34 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
 
     const event = parseUazapiEvent(raw);
 
-    // Diagnóstico: guarda o payload bruto + classificação (best-effort, nunca falha o 200).
-    // Retenção de 50/empresa via prune (função SQL).
-    try {
-      const { error: logErr } = await admin.from("whatsapp_webhook_events").insert({
-        empresa_id: inst.empresa_id,
-        event: typeof (raw as Record<string, unknown>)?.["event"] === "string"
-          ? ((raw as Record<string, unknown>)["event"] as string)
-          : typeof (raw as Record<string, unknown>)?.["EventType"] === "string"
-            ? ((raw as Record<string, unknown>)["EventType"] as string)
-            : null,
-        parsed_kind: event.kind,
-        payload: (raw ?? {}) as Record<string, unknown>,
-      });
-      if (logErr) console.error("webhook event log insert error:", logErr.message);
-      const { error: pruneErr } = await (admin as unknown as {
-        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      }).rpc("prune_whatsapp_webhook_events", { p_empresa_id: inst.empresa_id, p_keep: 50 });
-      if (pruneErr) console.error("webhook event prune error:", pruneErr.message);
-    } catch (logErr) {
-      console.error("webhook event log error:", logErr);
-    }
+    // Diagnóstico: guarda o payload bruto + classificação. Roda DEPOIS do 200 —
+    // é log, não regra de negócio, e o prune (`delete ... not in (select ...)`)
+    // custava caro em cima do caminho quente, uma vez por mensagem recebida.
+    // Segue determinístico (o e2e verify:sp1d exige retenção exata de 50).
+    const empresaIdLog = inst.empresa_id;
+    const eventKind = event.kind;
+    after(async () => {
+      try {
+        const { error: logErr } = await admin.from("whatsapp_webhook_events").insert({
+          empresa_id: empresaIdLog,
+          event: typeof (raw as Record<string, unknown>)?.["event"] === "string"
+            ? ((raw as Record<string, unknown>)["event"] as string)
+            : typeof (raw as Record<string, unknown>)?.["EventType"] === "string"
+              ? ((raw as Record<string, unknown>)["EventType"] as string)
+              : null,
+          parsed_kind: eventKind,
+          payload: (raw ?? {}) as Record<string, unknown>,
+        });
+        if (logErr) console.error("webhook event log insert error:", logErr.message);
+
+        const { error: pruneErr } = await (admin as unknown as {
+          rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+        }).rpc("prune_whatsapp_webhook_events", { p_empresa_id: empresaIdLog, p_keep: 50 });
+        if (pruneErr) console.error("webhook event prune error:", pruneErr.message);
+      } catch (logErr) {
+        console.error("webhook event log error:", logErr);
+      }
+    });
 
     if (event.kind === "message" && event.direction === "inbound") {
       await handleInboundMessage(

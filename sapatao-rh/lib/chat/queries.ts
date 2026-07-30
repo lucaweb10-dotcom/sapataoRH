@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import type { Candidato, Conversation, Message, MessageTemplate } from "@/types/database";
 import { signedMediaUrls } from "./signed-url";
+import { MESSAGES_PAGE_SIZE } from "./paginacao";
 
 // Conversations with embedded candidato data (PostgREST embed)
 export type ConversationWithCandidato = Conversation & {
@@ -34,16 +35,26 @@ export async function listConversations(): Promise<ConversationWithCandidato[]> 
   return (data ?? []) as ConversationWithCandidato[];
 }
 
-/** Returns the last 61 messages of a conversation, reversed to chronological order.
- *  hasMore=true if there are more than 60 messages. */
-export async function loadThread(conversationId: string): Promise<ThreadResult> {
+/** Returns the last page of messages of a conversation, reversed to chronological
+ *  order. `before` (ISO de created_at) pagina para trás; hasMore=true quando
+ *  ainda existe mensagem mais antiga que a página devolvida. */
+export async function loadThread(
+  conversationId: string,
+  before?: string | null,
+): Promise<ThreadResult> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let q = supabase
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
-    .limit(61);
+    .limit(MESSAGES_PAGE_SIZE + 1);
+
+  // Cursor keyset, não offset: com offset uma mensagem nova chegando durante a
+  // rolagem deslocaria a janela e duplicaria/puliria linhas.
+  if (before) q = q.lt("created_at", before);
+
+  const { data, error } = await q;
 
   if (error) {
     console.error("[chat/queries] loadThread error:", error);
@@ -51,9 +62,9 @@ export async function loadThread(conversationId: string): Promise<ThreadResult> 
   }
 
   const rows = (data ?? []) as Message[];
-  const hasMore = rows.length === 61;
+  const hasMore = rows.length === MESSAGES_PAGE_SIZE + 1;
   // We fetched newest-first; reverse to get chronological order for display.
-  const ordered = (hasMore ? rows.slice(0, 60) : rows).reverse();
+  const ordered = (hasMore ? rows.slice(0, MESSAGES_PAGE_SIZE) : rows).reverse();
   // Attach signed URLs for any stored media paths (TTL 1h, RLS-scoped).
   const paths = ordered.map((m) => m.midia_url).filter((p): p is string => !!p);
   const urls = await signedMediaUrls(paths);

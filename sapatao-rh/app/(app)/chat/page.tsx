@@ -18,6 +18,7 @@ import { MessageThread } from "@/components/chat/message-thread";
 import type { TemplatePronto } from "@/components/chat/composer";
 import { CandidatePanel } from "@/components/chat/candidate-panel";
 import { ChatRealtime } from "@/components/chat/realtime";
+import { AckReconciler } from "@/components/chat/ack-reconciler";
 import { MarkRead } from "@/components/chat/mark-read";
 import { listCargosIa, resolverCargo, type CargoIa } from "@/lib/cv/criterios";
 import type { ParecerOrigem } from "@/components/cv/parecer-view";
@@ -162,7 +163,7 @@ export default async function ChatPage({
             templates={templatesProntos}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-neutro-700">
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Selecione uma conversa para começar.
           </div>
         )}
@@ -194,6 +195,8 @@ export default async function ChatPage({
       {/* Realtime subscription + mark-read on open */}
       {empresaId && <ChatRealtime empresaId={empresaId} />}
       {displayedConvId && <MarkRead conversationId={displayedConvId} />}
+      {/* Ack das mensagens que nós enviamos: o webhook da UAZAPI não os entrega. */}
+      {displayedConvId && <AckReconciler conversationId={displayedConvId} />}
     </div>
   );
 }

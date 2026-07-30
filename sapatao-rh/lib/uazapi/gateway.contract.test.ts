@@ -14,7 +14,8 @@ let server: Server;
 let base: string;
 
 const ROUTES: Record<string, unknown> = {
-  "POST /instance/create": {
+  // Path documentado. Servidores antigos expõem /instance/create — coberto em client.test.ts.
+  "POST /instance/init": {
     token: "tok-inst", instance: { id: "r1x", name: "sapatao-t", status: "disconnected" },
   },
   "POST /instance/connect": {

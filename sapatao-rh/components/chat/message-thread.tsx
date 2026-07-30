@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { MessageStatus } from "@/types/database";
 import type { MessageWithSignedUrl } from "@/lib/chat/queries";
+import { MESSAGES_PAGE_SIZE } from "@/lib/chat/paginacao";
 import { isAnalisavelCv } from "@/lib/whatsapp/media-helpers";
 import { useSendQueue, type QueueItem, type QueueItemStatus } from "@/stores/send-queue";
+import { Button } from "@/components/ui/button";
 import { Composer, type TemplatePronto } from "./composer";
 import { dispatchSend, dispatchSendMedia } from "@/lib/chat/dispatch-send";
+import { carregarMensagensAnteriores } from "@/app/(app)/chat/actions";
 
 interface Props {
   messages: MessageWithSignedUrl[];
@@ -69,7 +72,7 @@ function StatusIcon({ status }: { status: MessageStatus | QueueItemStatus }) {
   }
 
   if (status === "read") {
-    return <span className="ml-1 text-blue-300" aria-label="lido">✓✓</span>;
+    return <span className="ml-1 text-info-soft" aria-label="lido">✓✓</span>;
   }
 
   // "failed" — handled separately at bubble level, no icon here
@@ -80,7 +83,7 @@ function StatusIcon({ status }: { status: MessageStatus | QueueItemStatus }) {
 
 function MediaPlaceholder() {
   return (
-    <p className="italic text-xs opacity-60">carregando mídia...</p>
+    <p className="italic text-caption opacity-60">carregando mídia...</p>
   );
 }
 
@@ -139,9 +142,9 @@ function AnalisarCurriculoButton({ messageId, isOutbound }: { messageId: string;
       onClick={handleClick}
       disabled={loading}
       className={cn(
-        "mt-1 rounded px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-1 disabled:opacity-60",
+        "mt-1 rounded px-2 py-0.5 text-caption font-medium transition-colors focus:outline-none focus-visible:ring-1 disabled:opacity-60",
         isOutbound
-          ? "bg-white/20 text-white hover:bg-white/30 focus-visible:ring-white/50"
+          ? "bg-card/20 text-white hover:bg-card/30 focus-visible:ring-white/50"
           : "bg-sapatao-verde/10 text-sapatao-verde hover:bg-sapatao-verde/20 focus-visible:ring-sapatao-verde",
       )}
     >
@@ -218,7 +221,7 @@ function ServerMediaContent({
     return (
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />
+          <DocumentIcon className={isOutbound ? "text-white/80" : "text-muted-foreground"} />
           <span className="max-w-[180px] truncate text-sm font-medium">{fileName}</span>
         </div>
         {url ? (
@@ -227,7 +230,7 @@ function ServerMediaContent({
             target="_blank"
             rel="noreferrer"
             className={cn(
-              "text-xs underline underline-offset-2",
+              "text-caption underline underline-offset-2",
               isOutbound ? "text-white/80 hover:text-white" : "text-sapatao-verde hover:text-sapatao-verde/80",
             )}
           >
@@ -278,7 +281,7 @@ function QueueMediaContent({ item, isOutbound }: { item: QueueItem; isOutbound: 
   // document / etc — show file name card
   return (
     <div className="flex items-center gap-2">
-      <DocumentIcon className={isOutbound ? "text-white/80" : "text-neutro-700"} />
+      <DocumentIcon className={isOutbound ? "text-white/80" : "text-muted-foreground"} />
       <span className="max-w-[180px] truncate text-sm font-medium">{fileName}</span>
     </div>
   );
@@ -313,6 +316,84 @@ function groupByDate(items: DisplayedMessage[]): { date: string; items: Displaye
 
 export function MessageThread({ messages, hasMore, conversationId, prefill, templates }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelaRef = useRef<HTMLDivElement>(null);
+
+  // ── Paginação para trás ─────────────────────────────────────────────────────
+  // `messages` é sempre a última janela vinda do servidor; as páginas antigas
+  // ficam aqui e são prependadas. Cursor keyset (created_at), sem sobreposição.
+  const [antigas, setAntigas] = useState<MessageWithSignedUrl[]>([]);
+  const [podeCarregarMais, setPodeCarregarMais] = useState(hasMore);
+  const [carregandoAntigas, setCarregandoAntigas] = useState(false);
+
+  // Trocou de conversa: descarta as páginas antigas e volta ao hasMore do servidor.
+  const [convAnterior, setConvAnterior] = useState(conversationId);
+  if (convAnterior !== conversationId) {
+    setConvAnterior(conversationId);
+    setAntigas([]);
+    setPodeCarregarMais(hasMore);
+  }
+
+  // Âncora de scroll: ao prependar, o conteúdo cresce para cima e o navegador
+  // manteria o scrollTop — o usuário "pularia" para o meio. Compensamos pelo
+  // delta de altura ANTES do browser pintar (useLayoutEffect).
+  const alturaAntesRef = useRef(0);
+  const ajustarScrollRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!ajustarScrollRef.current) return;
+    ajustarScrollRef.current = false;
+    const el = scrollRef.current;
+    if (!el) return;
+    const delta = el.scrollHeight - alturaAntesRef.current;
+    if (delta > 0) el.scrollTop += delta;
+  }, [antigas]);
+
+  const carregarAntigas = useCallback(async () => {
+    if (carregandoAntigas || !podeCarregarMais) return;
+    const maisAntiga = antigas[0] ?? messages[0];
+    if (!maisAntiga) return;
+
+    setCarregandoAntigas(true);
+    alturaAntesRef.current = scrollRef.current?.scrollHeight ?? 0;
+    ajustarScrollRef.current = true;
+    try {
+      const r = await carregarMensagensAnteriores(conversationId, maisAntiga.created_at);
+      if (r.messages.length === 0) {
+        setPodeCarregarMais(false);
+        ajustarScrollRef.current = false;
+        return;
+      }
+      setAntigas((prev) => [...r.messages, ...prev]);
+      setPodeCarregarMais(r.hasMore);
+    } catch {
+      // Falhou: para de tentar em loop e deixa o usuário rolar de novo depois.
+      setPodeCarregarMais(false);
+      ajustarScrollRef.current = false;
+    } finally {
+      setCarregandoAntigas(false);
+    }
+  }, [antigas, messages, conversationId, carregandoAntigas, podeCarregarMais]);
+
+  // Pré-carrega 200px antes de o usuário bater no topo.
+  useEffect(() => {
+    const alvo = sentinelaRef.current;
+    if (!alvo || !podeCarregarMais) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void carregarAntigas();
+      },
+      { root: scrollRef.current, rootMargin: "200px 0px 0px 0px" },
+    );
+    obs.observe(alvo);
+    return () => obs.disconnect();
+  }, [podeCarregarMais, carregarAntigas]);
+
+  // Janela completa: páginas antigas + janela do servidor, sem duplicar id.
+  const todasMensagens = useMemo(() => {
+    if (antigas.length === 0) return messages;
+    const vistos = new Set(messages.map((m) => m.id));
+    return [...antigas.filter((m) => !vistos.has(m.id)), ...messages];
+  }, [antigas, messages]);
 
   // Zustand store selectors
   const queue = useSendQueue((s) => s.queue);
@@ -348,18 +429,26 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
 
   // Build deduped display list: server rows + queue-only items
   const displayed: DisplayedMessage[] = useMemo(() => {
-    const serverClientIds = new Set(messages.map((m) => m.client_message_id).filter(Boolean));
+    const serverClientIds = new Set(todasMensagens.map((m) => m.client_message_id).filter(Boolean));
     const queueOnly = queueItems.filter((item) => !serverClientIds.has(item.clientMessageId));
-    const serverItems: DisplayedMessage[] = messages.map((msg) => ({ kind: "server", msg }));
+    const serverItems: DisplayedMessage[] = todasMensagens.map((msg) => ({ kind: "server", msg }));
     const queueDisplayed: DisplayedMessage[] = queueOnly.map((item) => ({ kind: "queue", item }));
     // Merge chronologically: server messages are already sorted, queue items go after (they are new)
     return [...serverItems, ...queueDisplayed];
-  }, [messages, queueItems]);
+  }, [todasMensagens, queueItems]);
 
-  // Scroll to bottom when conversation changes or displayed list grows
+  // Rola para o fim quando troca de conversa ou chega mensagem NOVA.
+  // Chave é o último item, não o tamanho da lista — prepender página antiga
+  // também aumenta o tamanho e jogaria o usuário de volta para o rodapé.
+  const ultimo = displayed[displayed.length - 1];
+  const ultimoId = ultimo
+    ? ultimo.kind === "server"
+      ? ultimo.msg.id
+      : ultimo.item.clientMessageId
+    : null;
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [conversationId, displayed.length]);
+  }, [conversationId, ultimoId]);
 
   const groups = groupByDate(displayed);
 
@@ -403,17 +492,31 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
   }
 
   return (
-    <div className="flex h-full flex-col bg-neutro-50">
+    <div className="flex h-full flex-col bg-muted">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {hasMore && (
-          <p className="mb-3 text-center text-xs text-neutro-700">
-            Exibindo as últimas 60 mensagens.
-          </p>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+        {podeCarregarMais ? (
+          <div ref={sentinelaRef} className="pb-3 text-center">
+            {carregandoAntigas ? (
+              <span className="text-caption text-muted-foreground">
+                Carregando mensagens anteriores…
+              </span>
+            ) : (
+              <Button variant="ghost" size="xs" onClick={() => void carregarAntigas()}>
+                Carregar mensagens anteriores
+              </Button>
+            )}
+          </div>
+        ) : (
+          todasMensagens.length > MESSAGES_PAGE_SIZE && (
+            <p className="mb-3 text-center text-caption text-muted-foreground">
+              Início da conversa.
+            </p>
+          )
         )}
 
         {displayed.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-neutro-700">
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Sem mensagens nesta conversa.
           </div>
         ) : (
@@ -422,11 +525,11 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
               <div key={group.date}>
                 {/* Date divider */}
                 <div className="my-3 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-neutro-200" />
-                  <span className="rounded-full bg-neutro-200 px-2 py-0.5 text-xs text-neutro-700">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="rounded-full bg-border px-2 py-0.5 text-caption text-muted-foreground">
                     {group.date}
                   </span>
-                  <div className="h-px flex-1 bg-neutro-200" />
+                  <div className="h-px flex-1 bg-border" />
                 </div>
 
                 <div className="space-y-2">
@@ -447,14 +550,14 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
                               "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm",
                               isOutbound
                                 ? "rounded-tr-sm bg-sapatao-verde text-white"
-                                : "rounded-tl-sm bg-white text-neutro-900 border border-neutro-200",
+                                : "rounded-tl-sm bg-card text-foreground border border-border",
                             )}
                           >
                             <ServerMediaContent msg={msg} isOutbound={isOutbound} />
                             <p
                               className={cn(
-                                "mt-1 text-right text-[10px]",
-                                isOutbound ? "text-white/70" : "text-neutro-700",
+                                "mt-1 text-right text-micro",
+                                isOutbound ? "text-white/70" : "text-muted-foreground",
                               )}
                             >
                               {formatTime(msg.enviada_em ?? msg.created_at)}
@@ -478,21 +581,21 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
                             className={cn(
                               "rounded-2xl rounded-tr-sm px-3 py-2 text-sm shadow-sm",
                               isFailed
-                                ? "bg-red-100 text-red-900 border border-red-200"
+                                ? "border border-danger/25 bg-danger-soft text-danger-foreground"
                                 : "bg-sapatao-verde text-white opacity-90",
                             )}
                           >
                             <QueueMediaContent item={item} isOutbound={!isFailed} />
                             <p
                               className={cn(
-                                "mt-1 text-right text-[10px]",
-                                isFailed ? "text-red-600" : "text-white/70",
+                                "mt-1 text-right text-micro",
+                                isFailed ? "text-danger" : "text-white/70",
                               )}
                             >
                               {formatTime(item.createdAt)}
                               {!isFailed && <StatusIcon status={item.status} />}
                               {isFailed && (
-                                <span className="ml-1 font-medium text-red-600" aria-label="falhou">
+                                <span className="ml-1 font-medium text-danger" aria-label="falhou">
                                   ✗
                                 </span>
                               )}
@@ -505,14 +608,14 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
                               <button
                                 type="button"
                                 onClick={() => handleRetry(item)}
-                                className="rounded px-2 py-0.5 text-xs font-medium text-sapatao-verde underline-offset-2 hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-sapatao-verde"
+                                className="rounded px-2 py-0.5 text-caption font-medium text-sapatao-verde underline-offset-2 hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-sapatao-verde"
                               >
                                 Reenviar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDiscard(item)}
-                                className="rounded px-2 py-0.5 text-xs font-medium text-neutro-700 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-neutro-400"
+                                className="rounded px-2 py-0.5 text-caption font-medium text-muted-foreground underline-offset-2 hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/40"
                               >
                                 Descartar
                               </button>

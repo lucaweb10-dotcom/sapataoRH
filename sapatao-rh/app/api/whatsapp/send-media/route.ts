@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMediaSchema } from "@/lib/validations/whatsapp";
@@ -20,6 +20,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = sendMediaSchema.safeParse(body);
   if (!parsed.success) {
+    // 413 quando o motivo é tamanho: o cliente precisa distinguir "arquivo
+    // grande demais" (reenviar nunca vai funcionar) de "payload inválido".
+    const grande = parsed.error.issues.some((i) => i.message === "arquivo_muito_grande");
+    if (grande) {
+      return NextResponse.json({ error: "arquivo_muito_grande" }, { status: 413 });
+    }
     return NextResponse.json({ error: "invalid", issues: parsed.error.flatten() }, { status: 422 });
   }
   const { conversationId, clientMessageId, fileBase64, mime, fileName, caption, voiceNote } = parsed.data;
@@ -31,12 +37,19 @@ export async function POST(request: Request) {
   const uazapiCfg = await getUazapiConfig(admin, empresaId);
   const midiaPath = `${empresaId}/out-${clientMessageId}.${mimeToExt(mime)}`;
 
-  // Upload to the bucket (for our own display via signed URL); best-effort.
+  // O upload no bucket é só para o NOSSO histórico — o provedor recebe o base64
+  // direto. Mantê-lo no caminho síncrono somava um round-trip de storage ao
+  // tempo que o usuário espera, então roda depois da resposta. O path é
+  // determinístico e já vai gravado na linha; enquanto o objeto não existe, a
+  // URL assinada sai nula e a bolha otimista local segue na tela (a poda em
+  // message-thread exige `midia_signed_url`), então a UI se cura sozinha.
   const bytes = Uint8Array.from(Buffer.from(rawB64, "base64"));
-  const up = await admin.storage
-    .from("whatsapp-media")
-    .upload(midiaPath, bytes, { contentType: mime, upsert: true });
-  if (up.error) console.error("send-media upload error:", up.error.message);
+  after(async () => {
+    const up = await admin.storage
+      .from("whatsapp-media")
+      .upload(midiaPath, bytes, { contentType: mime, upsert: true });
+    if (up.error) console.error("send-media upload error:", up.error.message);
+  });
 
   const deps: SendMediaDeps = {
     async loadContext(convId) {

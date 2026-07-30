@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createInstance, instanceStatus, downloadMedia, markChatRead, sendMedia,
+  sendText, UazapiError, UAZAPI_TIMEOUT_MS,
 } from "./client";
 
 const BASE = "https://fake.uazapi.com";
@@ -16,8 +17,30 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+describe("timeout do provedor", () => {
+  it("passa um AbortSignal em toda chamada", async () => {
+    mockJson({ messageid: "X" });
+    await sendText(BASE, "tok", "5551999", "oi");
+    const [, opts] = fetchMock.mock.calls[0];
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("converte TimeoutError em UazapiError 504 (vira falha, não trava a bolha)", async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException("timed out", "TimeoutError"));
+    const err = await sendText(BASE, "tok", "5551999", "oi").catch((e) => e);
+    expect(err).toBeInstanceOf(UazapiError);
+    expect((err as UazapiError).status).toBe(504);
+    expect((err as UazapiError).message).toContain(String(UAZAPI_TIMEOUT_MS));
+  });
+
+  it("não engole erro de rede que não seja timeout", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await expect(sendText(BASE, "tok", "5551999", "oi")).rejects.toBeInstanceOf(TypeError);
+  });
+});
+
 describe("createInstance (resposta real: instance é OBJETO)", () => {
-  it("extrai instance.id e token do topo", async () => {
+  it("usa /instance/init e extrai instance.id e token do topo", async () => {
     mockJson({
       response: "Instance created successfully",
       token: "tok-abc",
@@ -26,8 +49,23 @@ describe("createInstance (resposta real: instance é OBJETO)", () => {
     const r = await createInstance(BASE, "admin-tok", "sapatao-x");
     expect(r).toEqual({ instanceId: "r183e2ef9597845", token: "tok-abc" });
     const [url, opts] = fetchMock.mock.calls[0];
-    expect(url).toBe(`${BASE}/instance/create`);
+    expect(url).toBe(`${BASE}/instance/init`);
     expect(opts.headers.admintoken).toBe("admin-tok");
+  });
+
+  it("cai para /instance/create quando o servidor não conhece /instance/init", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) });
+    mockJson({ token: "tok-legado", instance: { id: "r999" } });
+    const r = await createInstance(BASE, "admin-tok", "sapatao-x");
+    expect(r).toEqual({ instanceId: "r999", token: "tok-legado" });
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/instance/init`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/instance/create`);
+  });
+
+  it("propaga erro que não seja 404 (não tenta o path legado)", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "unauthorized" }) });
+    await expect(createInstance(BASE, "admin-errado", "sapatao-x")).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

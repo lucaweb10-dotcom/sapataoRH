@@ -11,7 +11,7 @@ import {
   disconnectInstance,
   registerWebhook,
 } from "@/lib/uazapi/client";
-import { getUazapiConfig } from "@/lib/uazapi/config";
+import { getUazapiConfig, invalidateUazapiConfig } from "@/lib/uazapi/config";
 import {
   credenciaisUazapiSchema,
   webhookPublicoSchema,
@@ -259,6 +259,9 @@ export async function salvarCredenciais(input: {
       });
   if (error) return { error: "db_error" };
 
+  // O cache de 60s serve envio e webhook; sem isto a credencial nova só valeria
+  // no próximo minuto e o usuário veria "não configurada" logo após salvar.
+  invalidateUazapiConfig(profile.empresa_id);
   revalidatePath("/configuracoes/whatsapp");
   return { ok: true };
 }

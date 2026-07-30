@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_ANEXO_BASE64_CHARS } from "@/lib/whatsapp/limites";
 
 export const webhookParamsSchema = z.object({
   instanceId: z.string().min(1, "instanceId é obrigatório"),
@@ -21,7 +22,10 @@ export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export const sendMediaSchema = z.object({
   conversationId: z.uuid(),
   clientMessageId: z.uuid(),
-  fileBase64: z.string().min(1),
+  // Teto no servidor também: a UI já bloqueia antes de ler o arquivo, mas sem
+  // isto um payload grande morre no limite de corpo da plataforma e o usuário
+  // vê um erro de rede genérico em vez do motivo real.
+  fileBase64: z.string().min(1).max(MAX_ANEXO_BASE64_CHARS, "arquivo_muito_grande"),
   mime: z.string().min(1),
   fileName: z.string().optional(),
   caption: z.string().optional(),

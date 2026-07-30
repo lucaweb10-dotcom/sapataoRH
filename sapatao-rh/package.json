@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "set NODE_OPTIONS=--max-http-header-size=65536&& next dev",
+    "postinstall": "node scripts/copiar-opus-worker.mjs",
+    "prebuild": "node scripts/copiar-opus-worker.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -29,6 +31,7 @@
     "mammoth": "^1.12.0",
     "next": "16.2.9",
     "next-themes": "^0.4.6",
+    "opus-recorder": "^8.0.5",
     "pdf-parse": "^2.4.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",

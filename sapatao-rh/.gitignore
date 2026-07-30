@@ -43,3 +43,6 @@ next-env.d.ts
 # Supabase CLI local artifacts
 supabase/.branches/
 supabase/.temp/
+
+# worker do encoder Opus: copiado de node_modules pelo postinstall/prebuild
+public/opus/

@@ -1,12 +1,13 @@
 "use client";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { useThrottledRefresh } from "@/lib/realtime/use-throttled-refresh";
 
 /** Refreshes the board when any candidato in this empresa changes (e.g. another
- *  user moves a card, or a new WhatsApp lead is auto-placed). */
+ *  user moves a card, or a new WhatsApp lead is auto-placed). Coalescido em
+ *  1 refresh/500ms — uma importação em lote dispararia um evento por card. */
 export function FunilRealtime({ empresaId }: { empresaId: string }) {
-  const router = useRouter();
+  const agendarRefresh = useThrottledRefresh();
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -30,7 +31,7 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "candidatos", filter: `empresa_id=eq.${empresaId}` },
-          () => router.refresh(),
+          agendarRefresh,
         )
         .subscribe();
     })();
@@ -39,6 +40,6 @@ export function FunilRealtime({ empresaId }: { empresaId: string }) {
       authSub.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
-  }, [empresaId, router]);
+  }, [empresaId, agendarRefresh]);
   return null;
 }
