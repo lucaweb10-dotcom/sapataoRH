@@ -198,6 +198,66 @@ export type IaCriterios = Timestamps & {
   provider: "mock" | "openai" | null;
   openai_api_key: string | null;
   limite_tokens_mes: number | null;
+  /** Kill switch da triagem automática (padrão: desligada). */
+  triagem_ativa: boolean;
+  triagem_config: Record<string, unknown>;
+};
+
+export type IaUsoTipo = "copiloto" | "triagem" | "followup" | "transcricao";
+
+/** Consumo de IA que não gera parecer (o parecer vive em cv_analises). */
+export type IaUso = {
+  id: string;
+  empresa_id: string;
+  tipo: IaUsoTipo;
+  candidato_id: string | null;
+  conversation_id: string | null;
+  modelo: string | null;
+  tokens_est: number;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  custo_usd: number | null;
+  status: string;
+  created_at: string;
+};
+
+export type IaCopilotoMensagem = {
+  id: string;
+  empresa_id: string;
+  candidato_id: string;
+  user_id: string;
+  role: "user" | "assistant";
+  conteudo: string;
+  created_at: string;
+};
+
+export type TriagemEstado =
+  | "aguardando"
+  | "perguntando"
+  | "aguardando_cv"
+  | "concluida"
+  | "handoff"
+  | "pausada";
+
+export type IaTriagem = Timestamps & {
+  id: string;
+  empresa_id: string;
+  conversation_id: string;
+  candidato_id: string;
+  ativa: boolean;
+  estado: TriagemEstado;
+  passo: number;
+  cargo_id: string | null;
+  respostas: Record<string, unknown>;
+  turnos: number;
+  /** Quando o debounce vence e a resposta pode sair. */
+  responder_em: string | null;
+  /** Lease da claim atômica; null = livre. */
+  processando_ate: string | null;
+  ultimo_inbound_em: string | null;
+  /** null = follow-up nunca enviado. Sai de null uma única vez. */
+  followup_enviado_em: string | null;
+  motivo_parada: string | null;
 };
 
 export type IaCargo = Timestamps & {
@@ -380,6 +440,34 @@ export interface Database {
         Row: IaCargo;
         Insert: Partial<IaCargo> & { empresa_id: string; nome: string };
         Update: Partial<IaCargo>;
+        Relationships: [];
+      };
+      ia_uso: {
+        Row: IaUso;
+        Insert: Partial<IaUso> & { empresa_id: string; tipo: IaUsoTipo };
+        Update: Partial<IaUso>;
+        Relationships: [];
+      };
+      ia_copiloto_mensagens: {
+        Row: IaCopilotoMensagem;
+        Insert: Partial<IaCopilotoMensagem> & {
+          empresa_id: string;
+          candidato_id: string;
+          user_id: string;
+          role: "user" | "assistant";
+          conteudo: string;
+        };
+        Update: Partial<IaCopilotoMensagem>;
+        Relationships: [];
+      };
+      ia_triagem: {
+        Row: IaTriagem;
+        Insert: Partial<IaTriagem> & {
+          empresa_id: string;
+          conversation_id: string;
+          candidato_id: string;
+        };
+        Update: Partial<IaTriagem>;
         Relationships: [];
       };
       cv_analises: {

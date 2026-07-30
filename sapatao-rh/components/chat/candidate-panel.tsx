@@ -15,6 +15,7 @@ import { ConfirmMoveDialog } from "@/components/funil/confirm-move-dialog";
 import { EditarCandidatoDialog } from "@/components/candidatos/editar-candidato-dialog";
 import { ParecerView, type ParecerOrigem } from "@/components/cv/parecer-view";
 import { AnalisarPerfilButton, type CargoOpcao } from "@/components/chat/analisar-perfil-button";
+import { CopilotoDialog } from "@/components/chat/copiloto-dialog";
 import { UnidadeSelect, type UnidadeOpcao } from "@/components/candidatos/unidade-select";
 import { moverCandidatoAction } from "@/app/(app)/funil/actions";
 import {
@@ -352,6 +353,12 @@ export function CandidatePanel({
               cargoSugeridoId={cargoSugeridoId ?? null}
             />
           )}
+          <CopilotoDialog
+            candidatoId={candidato.id}
+            candidatoNome={candidato.nome}
+            canUsar={!!viewerCanAnalisar}
+            isAdmin={!!viewerIsAdmin}
+          />
           <ParecerView
             parecer={candidato.parecer_ia}
             score={candidato.score_ia}

@@ -13,6 +13,20 @@ export interface LlmJsonOpts {
   timeoutMs?: number;
 }
 
+/** Um turno de conversa multi-turno (copiloto do gestor). */
+export type LlmChatMsg = { role: "user" | "assistant"; conteudo: string };
+
+export interface LlmChatOpts {
+  timeoutMs?: number;
+  maxOutputTokens?: number;
+}
+
+export interface LlmUso {
+  tokensEst: number;
+  tokensIn?: number;
+  tokensOut?: number;
+}
+
 /** A pluggable LLM provider. The analysis pipelines depend on this interface only,
  *  so the mock and the real OpenAI provider are interchangeable. */
 export interface LlmProvider {
@@ -22,7 +36,13 @@ export interface LlmProvider {
     system: string,
     user: string,
     opts?: LlmJsonOpts,
-  ): Promise<{ json: string; tokensEst: number; tokensIn?: number; tokensOut?: number }>;
+  ): Promise<{ json: string } & LlmUso>;
+  /** Conversa multi-turno em texto livre (copiloto). Throws LlmError on API failure. */
+  completeChat(
+    system: string,
+    mensagens: LlmChatMsg[],
+    opts?: LlmChatOpts,
+  ): Promise<{ texto: string } & LlmUso>;
 }
 
 export type LlmErrorCode = "chave_invalida" | "ia_indisponivel";

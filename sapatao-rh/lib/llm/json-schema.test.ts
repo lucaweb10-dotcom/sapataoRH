@@ -75,7 +75,20 @@ describe("PARECER_JSON_SCHEMA", () => {
         "experiencia_relevante",
         "resumo",
         "perguntas_sugeridas_entrevista",
+        // Opcionais no zod (compat com pareceres antigos), mas o strict mode do
+        // provedor exige TODAS as keys — é isto que garante fonte/contradições
+        // na saída nova.
+        "contradicoes",
       ].sort(),
+    );
+  });
+
+  it("exige fonte em cada critério, mesmo sendo opcional no zod", () => {
+    const raiz = PARECER_JSON_SCHEMA.schema as Record<string, unknown>;
+    const props = raiz.properties as Record<string, Record<string, unknown>>;
+    const item = props.criterios_atendidos.items as Record<string, unknown>;
+    expect([...(item.required as string[])].sort()).toEqual(
+      ["criterio", "atendido", "evidencia", "fonte"].sort(),
     );
   });
 });

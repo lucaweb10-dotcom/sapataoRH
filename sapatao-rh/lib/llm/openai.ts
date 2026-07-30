@@ -1,4 +1,10 @@
-import { LlmError, type LlmAnexo, type LlmJsonOpts, type LlmProvider } from "./types";
+import {
+  LlmError,
+  type LlmAnexo,
+  type LlmJsonOpts,
+  type LlmProvider,
+  type LlmUso,
+} from "./types";
 
 const API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -66,8 +72,86 @@ export function createOpenAiProvider(cfg: OpenAiProviderCfg): LlmProvider {
     });
   }
 
+  /**
+   * Envia um corpo já montado e devolve texto + uso. No máximo 2 chamadas:
+   * 1 retry para 5xx/rede/timeout; 4xx nunca se repete.
+   * `charsFallback` só alimenta a estimativa quando a API não devolve usage.
+   */
+  async function executar(
+    body: string,
+    timeout: number,
+    charsFallback: number,
+  ): Promise<{ texto: string } & LlmUso> {
+    let res: Response;
+    let retried = false;
+    try {
+      res = await callOnce(body, timeout);
+    } catch (err) {
+      retried = true;
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        res = await callOnce(body, timeout);
+      } catch {
+        throw new LlmError("ia_indisponivel", err instanceof Error ? err.message : "falha de rede");
+      }
+    }
+    if (res.status >= 500 && !retried) {
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        res = await callOnce(body, timeout);
+      } catch {
+        throw new LlmError("ia_indisponivel", "falha de rede no retry");
+      }
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      throw new LlmError("chave_invalida", `OpenAI recusou a chave (HTTP ${res.status}).`);
+    }
+    if (!res.ok) {
+      throw new LlmError("ia_indisponivel", `OpenAI HTTP ${res.status}.`);
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = (await res.json()) as Record<string, unknown>;
+    } catch {
+      throw new LlmError("ia_indisponivel", "Resposta da OpenAI não é JSON.");
+    }
+
+    const texto = extractOutputText(payload);
+    if (texto === null) {
+      throw new LlmError("ia_indisponivel", "Resposta da OpenAI sem texto de saída.");
+    }
+
+    const usage = (payload.usage ?? {}) as Record<string, unknown>;
+    const tokensIn = typeof usage.input_tokens === "number" ? usage.input_tokens : undefined;
+    const tokensOut = typeof usage.output_tokens === "number" ? usage.output_tokens : undefined;
+    const tokensEst =
+      typeof usage.total_tokens === "number"
+        ? usage.total_tokens
+        : Math.max(1, Math.ceil(charsFallback / 4));
+
+    return { texto, tokensEst, tokensIn, tokensOut };
+  }
+
   return {
     modelo: cfg.modelo,
+
+    async completeChat(system, mensagens, opts) {
+      // Conteúdo como string simples: a Responses API infere a parte por role,
+      // e turnos do assistant não aceitam input_text.
+      const body = JSON.stringify({
+        model: cfg.modelo,
+        input: [
+          { role: "system", content: system },
+          ...mensagens.map((m) => ({ role: m.role, content: m.conteudo })),
+        ],
+        max_output_tokens: opts?.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+      });
+      const chars = system.length + mensagens.reduce((n, m) => n + m.conteudo.length, 0);
+      return executar(body, opts?.timeoutMs ?? timeoutMs, chars);
+    },
+
     async completeJson(system, user, opts?: LlmJsonOpts) {
       const userContent: ContentPart[] = [{ type: "input_text", text: user }];
       for (const anexo of opts?.anexos ?? []) userContent.push(anexoToPart(anexo));
@@ -93,58 +177,8 @@ export function createOpenAiProvider(cfg: OpenAiProviderCfg): LlmProvider {
           : {}),
       });
 
-      const timeout = opts?.timeoutMs ?? timeoutMs;
-      // No máximo 2 chamadas: 1 retry para 5xx/rede/timeout; 4xx nunca se repete.
-      let res: Response;
-      let retried = false;
-      try {
-        res = await callOnce(body, timeout);
-      } catch (err) {
-        retried = true;
-        await new Promise((r) => setTimeout(r, 500));
-        try {
-          res = await callOnce(body, timeout);
-        } catch {
-          throw new LlmError("ia_indisponivel", err instanceof Error ? err.message : "falha de rede");
-        }
-      }
-      if (res.status >= 500 && !retried) {
-        await new Promise((r) => setTimeout(r, 500));
-        try {
-          res = await callOnce(body, timeout);
-        } catch {
-          throw new LlmError("ia_indisponivel", "falha de rede no retry");
-        }
-      }
-
-      if (res.status === 401 || res.status === 403) {
-        throw new LlmError("chave_invalida", `OpenAI recusou a chave (HTTP ${res.status}).`);
-      }
-      if (!res.ok) {
-        throw new LlmError("ia_indisponivel", `OpenAI HTTP ${res.status}.`);
-      }
-
-      let payload: Record<string, unknown>;
-      try {
-        payload = (await res.json()) as Record<string, unknown>;
-      } catch {
-        throw new LlmError("ia_indisponivel", "Resposta da OpenAI não é JSON.");
-      }
-
-      const text = extractOutputText(payload);
-      if (text === null) {
-        throw new LlmError("ia_indisponivel", "Resposta da OpenAI sem texto de saída.");
-      }
-
-      const usage = (payload.usage ?? {}) as Record<string, unknown>;
-      const tokensIn = typeof usage.input_tokens === "number" ? usage.input_tokens : undefined;
-      const tokensOut = typeof usage.output_tokens === "number" ? usage.output_tokens : undefined;
-      const tokensEst =
-        typeof usage.total_tokens === "number"
-          ? usage.total_tokens
-          : Math.max(1, Math.ceil((system.length + user.length) / 4));
-
-      return { json: text, tokensEst, tokensIn, tokensOut };
+      const r = await executar(body, opts?.timeoutMs ?? timeoutMs, system.length + user.length);
+      return { json: r.texto, tokensEst: r.tokensEst, tokensIn: r.tokensIn, tokensOut: r.tokensOut };
     },
   };
 }

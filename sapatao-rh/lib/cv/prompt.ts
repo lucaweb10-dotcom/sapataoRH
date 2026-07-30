@@ -2,11 +2,29 @@ import type { CargoIa, Criterios } from "./criterios-shared";
 
 const MAX_CV_CHARS = 12000;
 
+export const INSTRUCAO_FONTES = [
+  "RASTREIE A ORIGEM DE CADA AFIRMAÇÃO. Em cada item de criterios_atendidos, preencha",
+  '"fonte" com uma destas opções:',
+  '- "conversa": o candidato afirmou isso nas mensagens (inclui áudio transcrito);',
+  '- "curriculo": está escrito no currículo ou documento anexado;',
+  '- "cadastro": veio dos dados do cadastro no sistema;',
+  '- "nao_consta": nenhuma fonte confirma — nesse caso "atendido" não pode ser true.',
+  "Não vale o mesmo peso: o que o candidato diz sobre si mesmo é menos verificável",
+  "do que o que está documentado. Registre isso na evidência quando for relevante.",
+  "",
+  'Quando as fontes DIVERGIREM, preencha "contradicoes" com o tema, o que foi dito na',
+  "conversa e o que consta na outra fonte. Não escolha um lado em silêncio: quem decide",
+  "é o gestor. Sem divergência, devolva uma lista vazia.",
+].join("\n");
+
 export const INSTRUCAO_JSON =
+  INSTRUCAO_FONTES +
+  "\n\n" +
   'Responda SOMENTE com um objeto JSON válido neste formato: { "score" (0-100 inteiro), ' +
-  '"verdict" ("apto"|"atencao"|"inapto"), "criterios_atendidos" [{"criterio","atendido","evidencia"}], ' +
+  '"verdict" ("apto"|"atencao"|"inapto"), "criterios_atendidos" [{"criterio","atendido","evidencia","fonte"}], ' +
   '"pontos_fortes" [string], "pontos_atencao" [string], "experiencia_relevante" (string), ' +
-  '"resumo" (string), "perguntas_sugeridas_entrevista" [string] }.';
+  '"resumo" (string), "perguntas_sugeridas_entrevista" [string], ' +
+  '"contradicoes" [{"tema","na_conversa","em_outra_fonte"}] }.';
 
 function lista(titulo: string, itens: string[]): string[] {
   if (itens.length === 0) return [];

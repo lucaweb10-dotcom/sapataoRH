@@ -1,7 +1,27 @@
 import { z } from "zod";
 import { toStrictJsonSchema } from "@/lib/llm/json-schema";
 
-/** Structured CV analysis returned by the LLM (mirrors PRD §7.5). */
+/** De onde saiu a evidência. Fontes diferentes têm confiabilidade diferente e o
+ *  gestor precisa ver isso — o que o candidato diz no WhatsApp não vale o mesmo
+ *  que o que está escrito no currículo. */
+export const FONTES = ["conversa", "curriculo", "cadastro", "nao_consta"] as const;
+export type Fonte = (typeof FONTES)[number];
+
+export const FONTE_ROTULO: Record<Fonte, string> = {
+  conversa: "disse na conversa",
+  curriculo: "no currículo",
+  cadastro: "no cadastro",
+  nao_consta: "não consta",
+};
+
+/**
+ * Structured CV analysis returned by the LLM (mirrors PRD §7.5).
+ *
+ * `fonte` e `contradicoes` são opcionais no zod DE PROPÓSITO: pareceres gravados
+ * antes da SP8 não os têm e precisam continuar carregando. O JSON Schema mandado
+ * ao provedor marca tudo como required (toStrictJsonSchema), então a saída NOVA
+ * sempre vem completa.
+ */
 export const parecerSchema = z.object({
   score: z.number().int().min(0).max(100),
   verdict: z.enum(["apto", "atencao", "inapto"]),
@@ -11,6 +31,7 @@ export const parecerSchema = z.object({
         criterio: z.string(),
         atendido: z.boolean(),
         evidencia: z.string(),
+        fonte: z.enum(FONTES).optional(),
       }),
     )
     .max(20),
@@ -19,6 +40,17 @@ export const parecerSchema = z.object({
   experiencia_relevante: z.string(),
   resumo: z.string(),
   perguntas_sugeridas_entrevista: z.array(z.string()).max(10),
+  /** Divergências entre o que o candidato disse, o currículo e o cadastro. */
+  contradicoes: z
+    .array(
+      z.object({
+        tema: z.string(),
+        na_conversa: z.string(),
+        em_outra_fonte: z.string(),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 
 export type Parecer = z.infer<typeof parecerSchema>;

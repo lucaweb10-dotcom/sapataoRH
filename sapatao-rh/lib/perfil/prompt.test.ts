@@ -88,7 +88,7 @@ describe("buildPerfilPrompt", () => {
     expect(user).toContain("- Tem veículo: sim");
     expect(user).toContain("- Tags: indicada");
     expect(user).toContain("CONVERSA AQUI");
-    expect(user).toContain("ANEXOS (texto extraído):");
+    expect(user).toContain('FONTE "curriculo" — anexos (texto extraído):');
     expect(user).toContain("--- cv.docx ---");
     expect(user).toContain("texto extraído do docx");
   });

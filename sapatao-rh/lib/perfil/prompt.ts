@@ -42,8 +42,9 @@ export function buildPerfilPrompt(
     INSTRUCAO_JSON,
   ].join("\n");
 
+  // Os rótulos abaixo são o que amarra cada afirmação à sua "fonte" no parecer.
   const dados = [
-    "Dados do candidato (cadastro):",
+    'FONTE "cadastro" — dados do candidato no sistema:',
     `- Nome: ${candidato.nome}`,
     `- Telefone: ${candidato.telefone}`,
     `- Vaga de interesse: ${candidato.vaga_interesse ?? "não informada"}`,
@@ -65,9 +66,9 @@ export function buildPerfilPrompt(
   const user = [
     ...dados,
     "",
-    "Conversa (WhatsApp):",
+    'FONTE "conversa" — mensagens trocadas no WhatsApp:',
     transcript,
-    ...(docs.length > 0 ? ["", "ANEXOS (texto extraído):", ...docs] : []),
+    ...(docs.length > 0 ? ["", 'FONTE "curriculo" — anexos (texto extraído):', ...docs] : []),
   ].join("\n");
 
   return { system, user };
