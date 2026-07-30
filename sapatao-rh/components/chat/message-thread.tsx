@@ -556,10 +556,15 @@ export function MessageThread({ messages, hasMore, conversationId, prefill, temp
                             <ServerMediaContent msg={msg} isOutbound={isOutbound} />
                             <p
                               className={cn(
-                                "mt-1 text-right text-micro",
+                                "mt-1 flex items-center justify-end gap-1 text-right text-micro",
                                 isOutbound ? "text-white/70" : "text-muted-foreground",
                               )}
                             >
+                              {/* O gestor precisa saber o que foi ele e o que foi
+                                  a IA. O candidato não vê esta etiqueta. */}
+                              {msg.metadata?.origem === "ia" && (
+                                <span className="rounded-full bg-white/20 px-1.5 leading-4">IA</span>
+                              )}
                               {formatTime(msg.enviada_em ?? msg.created_at)}
                               {isOutbound && msg.status && (
                                 <StatusIcon status={msg.status} />

@@ -5,7 +5,10 @@ export interface SendDeps {
   isOptedOut: (telefone: string) => Promise<boolean>;
   findByClientId: (clientMessageId: string) => Promise<{ id: string; status: MessageStatus } | null>;
   insertQueued: (row: {
-    empresaId: string; conversationId: string; texto: string; clientMessageId: string; senderId: string;
+    empresaId: string; conversationId: string; texto: string; clientMessageId: string;
+    /** null = mandada pela IA, não por uma pessoa. É por isso que `gestorAssumiu`
+     *  consegue distinguir quem falou. */
+    senderId: string | null;
   }) => Promise<{ id: string | null; error: { code?: string; message?: string } | null }>;
   /** Atomic claim: flips status queued only if the row was still failed (rows-affected === 1 → claimed:true). */
   reuseFailed: (messageId: string) => Promise<{ claimed: boolean; error: { message?: string } | null }>;
@@ -17,7 +20,9 @@ export interface SendDeps {
 }
 
 export interface SendInput {
-  empresaId: string; conversationId: string; texto: string; clientMessageId: string; senderId: string;
+  empresaId: string; conversationId: string; texto: string; clientMessageId: string;
+  /** null quando quem envia é a triagem automática. */
+  senderId: string | null;
 }
 
 export type SendResult =

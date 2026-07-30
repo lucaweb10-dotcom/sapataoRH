@@ -11,11 +11,13 @@ import {
   type CriteriosGerais,
 } from "@/lib/cv/criterios-shared";
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/modelos";
-import type { CvAnalise, IaCargo } from "@/types/database";
+import { parseTriagemConfig } from "@/lib/triagem/config";
+import type { CvAnalise, IaCargo, IaUso } from "@/types/database";
 import { IntegracaoForm } from "./integracao-form";
 import { RadarCustosCard } from "./radar-custos-card";
 import { CargosSection, type CargoConfig } from "./cargos-section";
 import { CriteriosGeraisForm } from "./criterios-gerais-form";
+import { TriagemForm } from "./triagem-form";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,7 @@ export default async function ConfigIaPage() {
   const admin = createAdminClient();
   const { data: cfgRow } = await admin
     .from("ia_criterios")
-    .select("openai_api_key, modelo, limite_tokens_mes, criterios")
+    .select("openai_api_key, modelo, limite_tokens_mes, criterios, triagem_ativa, triagem_config")
     .eq("empresa_id", profile.empresa_id)
     .maybeSingle();
 
@@ -80,8 +82,21 @@ export default async function ConfigIaPage() {
     "score" | "status" | "origem" | "cargo_nome" | "modelo" | "tokens_est" | "custo_usd" | "created_at"
   >[];
 
-  const tokensUsados = analises.reduce((acc, a) => acc + (a.tokens_est ?? 0), 0);
-  const custoMesUsd = analises.reduce((acc, a) => acc + (a.custo_usd === null ? 0 : Number(a.custo_usd)), 0);
+  // Copiloto e triagem consomem a MESMA cota mensal (ia_tokens_mes soma as duas
+  // tabelas), então o radar precisa somar as duas ou mostraria consumo a menos.
+  const { data: usoRows } = await supabase
+    .from("ia_uso")
+    .select("tokens_est, custo_usd")
+    .eq("empresa_id", profile.empresa_id)
+    .gte("created_at", inicioMes);
+  const uso = (usoRows ?? []) as Pick<IaUso, "tokens_est" | "custo_usd">[];
+
+  const tokensUsados =
+    analises.reduce((acc, a) => acc + (a.tokens_est ?? 0), 0) +
+    uso.reduce((acc, u) => acc + (u.tokens_est ?? 0), 0);
+  const custoMesUsd =
+    analises.reduce((acc, a) => acc + (a.custo_usd === null ? 0 : Number(a.custo_usd)), 0) +
+    uso.reduce((acc, u) => acc + (u.custo_usd === null ? 0 : Number(u.custo_usd)), 0);
   const analisesOk = analises.filter((a) => a.status === "ok");
   const dePerfilOk = analisesOk.filter((a) => a.origem === "perfil").length;
 
@@ -149,6 +164,11 @@ export default async function ConfigIaPage() {
         <CargosSection cargos={cargos} />
 
         <CriteriosGeraisForm gerais={gerais} cargosAtivos={cargos.filter((c) => c.ativo)} />
+
+        <TriagemForm
+          ativa={!!cfgRow?.triagem_ativa}
+          config={parseTriagemConfig(cfgRow?.triagem_config)}
+        />
       </div>
     </PageContainer>
   );

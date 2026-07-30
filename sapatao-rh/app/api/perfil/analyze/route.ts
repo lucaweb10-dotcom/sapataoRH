@@ -2,33 +2,16 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { analisarPerfil, type PerfilDeps, type PerfilErro, type PerfilMensagem } from "@/lib/perfil/analise";
-import { extractCvText } from "@/lib/cv/extract-text";
-import {
-  getCriterios,
-  listCargosIa,
-  resolverCargo,
-  criteriosCargoSchema,
-  type CargoIa,
-} from "@/lib/cv/criterios";
+import { analisarPerfil, type PerfilDeps, type PerfilErro } from "@/lib/perfil/analise";
+import { montarPerfilDeps } from "@/lib/perfil/deps";
+import { listCargosIa, resolverCargo, criteriosCargoSchema, type CargoIa } from "@/lib/cv/criterios";
 import { getLlmProvider } from "@/lib/llm/factory";
 import { getIaConfig } from "@/lib/llm/config";
 import { LlmError } from "@/lib/llm/types";
-import { limiteExcedido, tokensUsadosNoMes } from "@/lib/llm/limite";
-import { custoUsd } from "@/lib/llm/modelos";
-import { transcreverPendentes } from "@/lib/chat/transcricao";
-import { transcreverAudio } from "@/lib/llm/transcribe";
-import { moverParaIaConcluida } from "@/lib/funil/mover-ia";
 import { perfilAnalyzeSchema } from "@/lib/validations/perfil";
-import type { Message } from "@/types/database";
 
 export const runtime = "nodejs"; // mammoth/pdf precisam do runtime Node
 export const maxDuration = 120; // transcrições + LLM podem passar de 30s na 1ª análise
-
-const BUCKET = "whatsapp-media";
-const MAX_MENSAGENS = 500;
-const MAX_PDF_BYTES = 8 * 1024 * 1024;
-const MAX_IMG_BYTES = 5 * 1024 * 1024;
 
 const ERRO_HTTP: Record<PerfilErro | "cargo_indefinido", { status: number; message: string }> = {
   sem_mensagens: { status: 422, message: "Esta conversa ainda não tem conteúdo suficiente para análise." },
@@ -123,152 +106,17 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  const baixar = async (path: string): Promise<{ buffer: Buffer; mime: string } | null> => {
-    const { data, error } = await supabase.storage.from(BUCKET).download(path);
-    if (error || !data) return null;
-    return { buffer: Buffer.from(await data.arrayBuffer()), mime: data.type || "application/octet-stream" };
-  };
-
-  const deps: PerfilDeps = {
-    getMensagens: async (conversationId) => {
-      // mais recentes primeiro + reverse: conversas gigantes mantêm a cauda recente.
-      const { data } = await supabase
-        .from("messages")
-        .select("id, direction, tipo, conteudo, midia_url, midia_mime, metadata, transcricao, created_at")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: false })
-        .limit(MAX_MENSAGENS);
-      const rows = (data ?? []) as Pick<
-        Message,
-        "id" | "direction" | "tipo" | "conteudo" | "midia_url" | "midia_mime" | "metadata" | "transcricao" | "created_at"
-      >[];
-      return rows.reverse() as PerfilMensagem[];
-    },
-    checarLimite: async () => ({
-      excedido: limiteExcedido(await tokensUsadosNoMes(admin, cand.empresa_id), cfg.limiteTokensMes),
-    }),
-    transcreverPendentes: async (audios) => {
-      // Provider mock: sem transcrição (placeholders) — e2e/dev sem chave funciona.
-      if (cfg.provider !== "openai" || !cfg.apiKey) {
-        return { porMensagem: new Map<string, string>(), tokens: 0 };
-      }
-      const apiKey = cfg.apiKey;
-      return transcreverPendentes(audios, {
-        baixarAudio: baixar,
-        transcrever: (audio) => transcreverAudio({ apiKey }, audio),
-        salvarCache: async (messageId, texto) => {
-          const { error } = await supabase.from("messages").update({ transcricao: texto }).eq("id", messageId);
-          return { error };
-        },
-      });
-    },
-    getDocumentoTexto: async (path, mime) => {
-      const file = await baixar(path);
-      if (!file) return null;
-      try {
-        return await extractCvText(file.buffer, mime);
-      } catch {
-        return null;
-      }
-    },
-    getAnexoPdf: async (path, nome) => {
-      const file = await baixar(path);
-      if (!file || file.buffer.length > MAX_PDF_BYTES) return null;
-      return { kind: "pdf", mime: "application/pdf", base64: file.buffer.toString("base64"), nome };
-    },
-    getAnexoImagem: async (path, mime) => {
-      const file = await baixar(path);
-      if (!file || file.buffer.length > MAX_IMG_BYTES) return null;
-      return { kind: "image", mime, base64: file.buffer.toString("base64") };
-    },
-    getCriterios,
-    llmJson: (system, user, opts) => llm.completeJson(system, user, opts),
-    persist: async (candidatoId, score, parecer) => {
-      const { error } = await supabase
-        .from("candidatos")
-        .update({
-          score_ia: score,
-          parecer_ia: { ...parecer, cargo: cargo?.nome ?? null } as unknown as Record<string, unknown>,
-        })
-        .eq("id", candidatoId);
-      return { error };
-    },
-    registrarAnalise: async (log) => {
-      const { error } = await supabase.from("cv_analises").insert({
-        empresa_id: cand.empresa_id,
-        candidato_id: cand.id,
-        message_id: null,
-        conversation_id: conv.id,
-        origem: "perfil",
-        cargo_nome: cargo?.nome ?? null,
-        score: log.score,
-        parecer: (log.parecer as unknown as Record<string, unknown>) ?? null,
-        modelo: llm.modelo,
-        tokens_est: log.tokensEst,
-        tokens_in: log.tokensIn,
-        tokens_out: log.tokensOut,
-        custo_usd:
-          log.tokensIn !== null && log.tokensOut !== null
-            ? custoUsd(llm.modelo, log.tokensIn, log.tokensOut)
-            : null,
-        status: log.status,
-        movido_por: profile.id,
-      });
-      return { error };
-    },
-    moverParaAnaliseConcluida: (candidatoId) =>
-      moverParaIaConcluida(
-        { empresaId: cand.empresa_id, candidatoId, etapaAtualId: cand.etapa_id },
-        {
-          getFunilDefault: async (empresaId) => {
-            // SP7: funil da UNIDADE do candidato (se houver), senão o Geral.
-            if (cand.unidade_id) {
-              const { data: daUnidade } = await supabase
-                .from("funis")
-                .select("id")
-                .eq("empresa_id", empresaId)
-                .eq("unidade_id", cand.unidade_id)
-                .eq("ativo", true)
-                .maybeSingle();
-              if (daUnidade) return daUnidade;
-            }
-            const { data } = await supabase
-              .from("funis")
-              .select("id")
-              .eq("empresa_id", empresaId)
-              .eq("is_default", true)
-              .maybeSingle();
-            return data ?? null;
-          },
-          getEtapas: async (funilId) => {
-            const { data } = await supabase
-              .from("funil_etapas")
-              .select("id, nome, ordem, marcador")
-              .eq("funil_id", funilId)
-              .order("ordem", { ascending: true });
-            return data ?? [];
-          },
-          updateEtapa: async (cId, etapaId) => {
-            const { error } = await supabase
-              .from("candidatos")
-              .update({ etapa_id: etapaId, etapa_entrou_em: new Date().toISOString() })
-              .eq("id", cId);
-            return { error };
-          },
-          insertHistory: async (row) => {
-            const { error } = await supabase.from("kanban_history").insert({
-              empresa_id: cand.empresa_id,
-              candidato_id: cand.id,
-              de_etapa: row.deEtapa,
-              para_etapa: row.paraEtapa,
-              movido_por: profile.id,
-              observacao: row.observacao,
-            });
-            return { error };
-          },
-        },
-      ),
-  };
+  const deps: PerfilDeps = montarPerfilDeps(supabase, admin, {
+    empresaId: cand.empresa_id,
+    candidatoId: cand.id,
+    conversationId: conv.id,
+    etapaAtualId: cand.etapa_id,
+    unidadeId: cand.unidade_id,
+    cargo,
+    movidoPor: profile.id,
+    cfg,
+    llm,
+  });
 
   let result;
   try {

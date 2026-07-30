@@ -13,6 +13,7 @@ import {
   type CriteriosGerais,
 } from "@/lib/cv/criterios-shared";
 import { cargoNomeSchema, integracaoIaSchema } from "@/lib/validations/ia";
+import { triagemConfigSchema } from "@/lib/triagem/config";
 import { getIaConfig } from "@/lib/llm/config";
 import { getLlmProvider } from "@/lib/llm/factory";
 import { LlmError } from "@/lib/llm/types";
@@ -80,6 +81,98 @@ export async function salvarIntegracao(input: {
 }
 
 /** Salva as respostas do questionário de critérios GERAIS (objeto v2). */
+/**
+ * Liga/desliga a triagem automática e grava sua config.
+ *
+ * O liga/desliga é o kill switch da empresa (trava 7): com `ativa: false`,
+ * nenhuma mensagem automática sai, nem para conversas já em andamento.
+ */
+export async function salvarTriagem(input: {
+  ativa: boolean;
+  config: unknown;
+}): Promise<ActionResult> {
+  const profile = await getCurrentProfile();
+  if (!isAdmin(profile)) return { ok: false, error: "forbidden" };
+
+  const parsed = triagemConfigSchema.safeParse(input.config);
+  if (!parsed.success) return { ok: false, error: "invalido" };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("ia_criterios")
+    .select("id")
+    .eq("empresa_id", profile.empresa_id)
+    .maybeSingle();
+
+  const fields = { triagem_ativa: input.ativa, triagem_config: parsed.data };
+  const { error } = existing
+    ? await admin.from("ia_criterios").update(fields).eq("id", existing.id)
+    : await admin.from("ia_criterios").insert({
+        empresa_id: profile.empresa_id,
+        prompt_base: DEFAULT_CRITERIOS.prompt_base,
+        ...fields,
+      });
+
+  if (error) return { ok: false, error: error.message };
+  await revalidar();
+  return { ok: true };
+}
+
+/**
+ * Desliga a triagem em UMA conversa (botão no chat). Não volta sozinha: é o
+ * gestor que reativa. Mesma semântica da trava 6.
+ */
+export async function alternarTriagemDaConversa(
+  conversationId: string,
+  ativa: boolean,
+): Promise<ActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "rh" && !profile.platform_admin)) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  const admin = createAdminClient();
+  const { data: conv } = await admin
+    .from("conversations")
+    .select("id, empresa_id, candidato_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (!conv) return { ok: false, error: "nao_encontrada" };
+  if (!profile.platform_admin && conv.empresa_id !== profile.empresa_id) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  const { data: existente } = await admin
+    .from("ia_triagem")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .maybeSingle();
+
+  const { error } = existente
+    ? await admin
+        .from("ia_triagem")
+        .update({
+          ativa,
+          motivo_parada: ativa ? null : "desligada_pelo_gestor",
+          responder_em: null,
+          // Reativar volta a conversa para o fluxo; o estado terminal sairia calado.
+          ...(ativa ? { estado: "perguntando" as const } : {}),
+        })
+        .eq("id", existente.id)
+    : await admin.from("ia_triagem").insert({
+        empresa_id: conv.empresa_id,
+        conversation_id: conversationId,
+        candidato_id: conv.candidato_id,
+        ativa,
+        estado: ativa ? "perguntando" : "pausada",
+        motivo_parada: ativa ? null : "desligada_pelo_gestor",
+      });
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/chat");
+  return { ok: true };
+}
+
 export async function salvarCriteriosGerais(input: CriteriosGerais): Promise<ActionResult> {
   const profile = await getCurrentProfile();
   if (!isAdmin(profile)) return { ok: false, error: "forbidden" };

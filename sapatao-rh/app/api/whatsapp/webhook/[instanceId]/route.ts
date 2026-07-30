@@ -5,6 +5,7 @@ import { handleInboundMessage, type DbLike } from "@/lib/whatsapp/inbound";
 import { advanceStatus } from "@/lib/whatsapp/status";
 import { downloadMedia } from "@/lib/uazapi/client";
 import { downloadAndStoreInbound } from "@/lib/whatsapp/media";
+import { agendarTriagem, rodarTriagem } from "@/lib/triagem/servico";
 import type { MessageTipo } from "@/types/database";
 
 const MEDIA_TYPES = ["image", "audio", "video", "document", "ptt"];
@@ -155,11 +156,37 @@ export async function POST(request: Request, ctx: { params: Promise<{ instanceId
     });
 
     if (event.kind === "message" && event.direction === "inbound") {
-      await handleInboundMessage(
+      const inbound = await handleInboundMessage(
         event,
         { empresa_id: inst.empresa_id, instance_id: inst.id },
         makeDb(admin),
       );
+
+      // Triagem automática (SP8). Trava 1: ESTE é o único gatilho de resposta —
+      // não existe varredura que fale com quem não falou primeiro. Roda depois
+      // do 200 e nunca derruba o webhook.
+      if ("ok" in inbound) {
+        const empresaIdTriagem = inst.empresa_id;
+        const { conversationId, candidatoId } = inbound;
+        after(async () => {
+          try {
+            const ag = await agendarTriagem(admin, {
+              empresaId: empresaIdTriagem,
+              conversationId,
+              candidatoId,
+            });
+            if (!ag.agendado) return;
+
+            // Trava 4: espera o debounce. Se outra mensagem chegar nesse meio,
+            // ela empurra responder_em e esta execução sai calada — sai UMA
+            // resposta para a rajada inteira.
+            await new Promise((r) => setTimeout(r, ag.debounceMs));
+            await rodarTriagem(admin, conversationId);
+          } catch (err) {
+            console.error("triagem: falha ao responder", err);
+          }
+        });
+      }
       // Inbound media is NOT in the webhook payload — download it asynchronously
       // (never blocks the 200). The helper is idempotent on redelivery.
       if (MEDIA_TYPES.includes(event.messageType)) {
