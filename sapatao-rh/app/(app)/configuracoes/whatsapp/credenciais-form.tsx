@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { salvarCredenciais } from "./actions";
 
 interface Props {
@@ -41,39 +43,39 @@ export function CredenciaisForm({ baseUrl, tokenMascarado }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-4">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
       <div>
-        <h2 className="font-semibold text-neutro-900">Credenciais UAZAPI</h2>
-        <p className="text-sm text-neutro-600 mt-0.5">
+        <h2 className="font-semibold text-foreground">Credenciais UAZAPI</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
           Servidor e admin token da sua conta UAZAPI. O token nunca é exibido depois de salvo.
         </p>
       </div>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-neutro-700">URL do servidor</span>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="uazapi-url">URL do servidor</Label>
+        <Input
+          id="uazapi-url"
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://xxxx.uazapi.com"
-          className="w-full rounded-md border border-neutro-200 px-3 py-2 text-sm"
         />
-      </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-neutro-700">Admin token</span>
-        <input
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="uazapi-token">Admin token</Label>
+        <Input
+          id="uazapi-token"
           type="password"
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder={tokenMascarado ?? "cole o admin token"}
           autoComplete="off"
-          className="w-full rounded-md border border-neutro-200 px-3 py-2 text-sm"
         />
         {tokenMascarado && !token && (
-          <span className="text-xs text-neutro-500">
+          <span className="block text-caption text-muted-foreground">
             Já configurado ({tokenMascarado}). Preencha para substituir.
           </span>
         )}
-      </label>
+      </div>
       <Button onClick={handleSalvar} disabled={saving || !url || (!token && !tokenMascarado)}>
         {saving ? "Salvando..." : "Salvar credenciais"}
       </Button>

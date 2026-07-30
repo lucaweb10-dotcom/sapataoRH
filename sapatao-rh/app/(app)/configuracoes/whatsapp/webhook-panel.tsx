@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { salvarWebhookPublico } from "./actions";
 
 interface EventoRow {
@@ -42,53 +43,54 @@ export function WebhookPanel({ publicUrl, instanciaProvisionada, eventos }: Prop
   }
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-4">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
       <div>
-        <h2 className="font-semibold text-neutro-900">Webhook (recebimento)</h2>
-        <p className="text-sm text-neutro-600 mt-0.5">
+        <h2 className="font-semibold text-foreground">Webhook (recebimento)</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
           URL pública que a UAZAPI usa para entregar mensagens. Rodando local, suba um túnel
-          (<code className="bg-neutro-100 px-1 rounded">cloudflared tunnel --url http://localhost:3000</code>)
+          (<code className="bg-muted px-1 rounded">cloudflared tunnel --url http://localhost:3000</code>)
           e cole aqui a URL gerada.
         </p>
       </div>
       <div className="flex gap-2">
-        <input
+        <Input
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://abc.trycloudflare.com"
-          className="flex-1 rounded-md border border-neutro-200 px-3 py-2 text-sm"
+          aria-label="URL pública do webhook"
+          className="flex-1"
         />
         <Button onClick={handleSalvar} disabled={saving || !url}>
           {saving ? "Registrando..." : "Salvar e registrar"}
         </Button>
       </div>
       {!instanciaProvisionada && (
-        <p className="text-xs text-amber-700">
+        <p className="text-caption text-warning-foreground">
           A instância ainda não foi conectada — a URL fica salva e o registro acontece no Conectar.
         </p>
       )}
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-neutro-900">Últimos eventos recebidos</h3>
+        <h3 className="text-sm font-semibold text-foreground">Últimos eventos recebidos</h3>
         {eventos.length === 0 ? (
-          <p className="text-sm text-neutro-500">
+          <p className="text-sm text-muted-foreground">
             Nenhum evento ainda. Depois de registrar o webhook, mande um “oi” para o número
             conectado e recarregue.
           </p>
         ) : (
-          <ul className="divide-y divide-neutro-100 text-sm">
+          <ul className="divide-y divide-border-subtle text-sm">
             {eventos.map((ev) => (
               <li key={ev.id} className="py-2">
                 <details>
                   <summary className="cursor-pointer flex items-center gap-2">
-                    <span className="text-neutro-500 tabular-nums">
+                    <span className="text-muted-foreground tabular-nums">
                       {new Date(ev.created_at).toLocaleString("pt-BR")}
                     </span>
-                    <code className="bg-neutro-100 px-1 rounded">{ev.event ?? "?"}</code>
-                    <span className="text-neutro-600">→ {ev.parsed_kind}</span>
+                    <code className="bg-muted px-1 rounded">{ev.event ?? "?"}</code>
+                    <span className="text-muted-foreground">→ {ev.parsed_kind}</span>
                   </summary>
-                  <pre className="mt-2 max-h-64 overflow-auto rounded bg-neutro-50 p-2 text-xs">
+                  <pre className="mt-2 max-h-64 overflow-auto rounded bg-muted p-2 text-caption">
                     {JSON.stringify(ev.payload, null, 2)}
                   </pre>
                 </details>

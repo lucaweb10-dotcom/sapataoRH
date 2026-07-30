@@ -129,9 +129,9 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
 
   if (uazapiMissing) {
     return (
-      <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-6 text-center space-y-2">
-        <p className="font-semibold text-neutro-900">UAZAPI não configurada</p>
-        <p className="text-sm text-neutro-600">
+      <div className="rounded-lg border border-border bg-muted p-6 text-center space-y-2">
+        <p className="font-semibold text-foreground">UAZAPI não configurada</p>
+        <p className="text-sm text-muted-foreground">
           Salve a URL do servidor e o admin token no bloco “Credenciais UAZAPI” acima
           e tente conectar novamente.
         </p>
@@ -148,36 +148,36 @@ export function WhatsappInstancePanel({ initialStatus, initialPhone }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-5">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-5">
       {/* Status row */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-neutro-700">Status:</span>
+        <span className="text-sm font-medium text-muted-foreground">Status:</span>
         <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>
         {status === "conectado" && phone && (
-          <span className="text-sm text-neutro-600">({phone})</span>
+          <span className="text-sm text-muted-foreground">({phone})</span>
         )}
       </div>
 
       {/* QR code */}
       {qr && (
         <div className="flex flex-col items-center gap-3 py-2">
-          <p className="text-sm text-neutro-600">
+          <p className="text-sm text-muted-foreground">
             Aponte a câmera do WhatsApp para conectar:
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qr}
             alt="QR Code WhatsApp"
-            className="h-52 w-52 rounded-lg border border-neutro-200 object-contain"
+            className="h-52 w-52 rounded-lg border border-border object-contain"
           />
-          <p className="text-xs text-neutro-500">Verificando conexão automaticamente...</p>
+          <p className="text-caption text-muted-foreground">Verificando conexão automaticamente...</p>
         </div>
       )}
 
       {paircode && (
-        <p className="text-center text-sm text-neutro-600">
+        <p className="text-center text-sm text-muted-foreground">
           Ou use o código de pareamento:{" "}
-          <code className="bg-neutro-100 px-1.5 py-0.5 rounded font-semibold">{paircode}</code>
+          <code className="bg-muted px-1.5 py-0.5 rounded font-semibold">{paircode}</code>
         </p>
       )}
 

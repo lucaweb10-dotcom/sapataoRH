@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUazapiConfig } from "@/lib/uazapi/config";
 import { PageContainer } from "@/components/shell/page-container";
 import { SettingsNav } from "@/components/configuracoes/settings-nav";
 import { WhatsappInstancePanel } from "./whatsapp-instance-panel";
@@ -27,9 +28,15 @@ export default async function WhatsappPage() {
     .eq("empresa_id", profile.empresa_id)
     .maybeSingle();
 
-  const tokenMascarado = inst?.uazapi_admin_token
-    ? `••••${inst.uazapi_admin_token.slice(-4)}`
-    : null;
+  // A config efetiva é banco > env (lib/uazapi/config). A tela precisa refletir isso,
+  // senão parece "não configurado" quando o token veio do .env.local.
+  const cfg = await getUazapiConfig(admin, profile.empresa_id);
+  const tokenSalvo = inst?.uazapi_admin_token ?? null;
+  const tokenMascarado = tokenSalvo
+    ? `••••${tokenSalvo.slice(-4)}`
+    : cfg?.adminToken
+      ? `••••${cfg.adminToken.slice(-4)} (via ambiente)`
+      : null;
 
   // Eventos via RLS (policy: admin do tenant).
   const supabase = await createClient();
@@ -44,13 +51,16 @@ export default async function WhatsappPage() {
       <SettingsNav />
       <div className="space-y-6 max-w-2xl">
         <div>
-          <h1 className="font-display text-2xl font-bold">WhatsApp</h1>
-          <p className="text-sm text-neutro-700 mt-1">
+          <h1 className="font-display text-display font-bold">WhatsApp</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Conecte o número de WhatsApp da empresa para receber candidaturas.
           </p>
         </div>
 
-        <CredenciaisForm baseUrl={inst?.uazapi_base_url ?? null} tokenMascarado={tokenMascarado} />
+        <CredenciaisForm
+          baseUrl={inst?.uazapi_base_url ?? cfg?.baseUrl ?? null}
+          tokenMascarado={tokenMascarado}
+        />
 
         <WhatsappInstancePanel
           initialStatus={(inst?.status as WhatsappStatus) ?? "desconectado"}
