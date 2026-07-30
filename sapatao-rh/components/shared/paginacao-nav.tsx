@@ -26,12 +26,12 @@ export function PaginacaoNav({
   };
 
   if (totalPaginas <= 1) {
-    return <p className="text-xs text-neutro-500">{resumo}</p>;
+    return <p className="text-caption text-muted-foreground">{resumo}</p>;
   }
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <p className="text-xs text-neutro-500">{resumo}</p>
+      <p className="text-caption text-muted-foreground">{resumo}</p>
       <div className="flex items-center gap-1.5">
         <Button
           size="sm"
@@ -39,10 +39,10 @@ export function PaginacaoNav({
           disabled={page <= 1}
           render={page > 1 ? <Link href={hrefDaPagina(page - 1)} /> : undefined}
         >
-          <ChevronLeft className="size-3.5" />
+          <ChevronLeft />
           Anterior
         </Button>
-        <span className="px-1 text-xs tabular-nums text-neutro-700">
+        <span className="px-1 text-caption tabular text-muted-foreground">
           {Math.min(page, totalPaginas)}/{totalPaginas}
         </span>
         <Button
@@ -52,7 +52,7 @@ export function PaginacaoNav({
           render={page < totalPaginas ? <Link href={hrefDaPagina(page + 1)} /> : undefined}
         >
           Próxima
-          <ChevronRight className="size-3.5" />
+          <ChevronRight />
         </Button>
       </div>
     </div>

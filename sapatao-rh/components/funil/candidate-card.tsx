@@ -45,7 +45,7 @@ export function CandidateCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpen(candidato)}
-      className={`cursor-pointer rounded-xl border border-l-[3px] border-neutro-200 bg-card p-3 shadow-warm transition-all hover:-translate-y-0.5 hover:shadow-warm-md ${
+      className={`cursor-pointer rounded-xl border border-l-[3px] border-border bg-card p-3.5 shadow-xs transition-all duration-200 ease-soft hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm ${
         canMove ? "active:cursor-grabbing" : ""
       }`}
     >
@@ -57,9 +57,11 @@ export function CandidateCard({
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-neutro-900">{candidato.nome}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{candidato.nome}</p>
           {candidato.vaga_interesse && (
-            <p className="truncate text-xs text-neutro-500">{candidato.vaga_interesse}</p>
+            <p className="truncate text-caption text-muted-foreground">
+              {candidato.vaga_interesse}
+            </p>
           )}
         </div>
         <ScoreBadge score={candidato.score_ia} />
@@ -70,7 +72,7 @@ export function CandidateCard({
           {tags.map((t) => (
             <span
               key={t}
-              className="truncate rounded-full border border-neutro-200 bg-neutro-50 px-2 py-0.5 text-[10px] font-medium text-neutro-600"
+              className="truncate rounded-full border border-border bg-muted px-2 py-0.5 text-micro font-medium text-muted-foreground"
             >
               {t}
             </span>
@@ -79,7 +81,7 @@ export function CandidateCard({
       )}
 
       {tempo && (
-        <div className="mt-2.5 flex items-center gap-1 text-[10px] text-neutro-500">
+        <div className="mt-2.5 flex items-center gap-1 text-micro text-muted-foreground">
           <Clock className="size-3 shrink-0" />
           {tempo === "agora" ? "agora" : `${tempo} na etapa`}
         </div>

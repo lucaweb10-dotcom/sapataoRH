@@ -18,16 +18,16 @@ function Info({ label, value }: { label: string; value: string | number | null |
   if (value === null || value === undefined || value === "") return null;
   return (
     <div>
-      <dt className="text-xs font-medium text-neutro-700">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutro-900">{value}</dd>
+      <dt className="text-caption font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-neutro-200 bg-card p-4 shadow-warm">
-      <h2 className="mb-3 text-sm font-semibold text-neutro-900">{titulo}</h2>
+    <section className="rounded-xl border border-border bg-card p-4 shadow-warm">
+      <h2 className="mb-3 text-sm font-semibold text-foreground">{titulo}</h2>
       {children}
     </section>
   );
@@ -60,7 +60,7 @@ export default async function FuncionarioFichaPage({
     <PageContainer>
       <Link
         href="/funcionarios"
-        className="inline-flex items-center gap-1.5 text-sm text-neutro-700 hover:text-neutro-900"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         Funcionários
@@ -69,14 +69,14 @@ export default async function FuncionarioFichaPage({
       {/* Header */}
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">{funcionario.nome_completo}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutro-700">
+          <h1 className="font-display text-display font-bold">{funcionario.nome_completo}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>
               {funcionario.cargo}
               {funcionario.unidade_nome && <> · {funcionario.unidade_nome}</>}
             </span>
             <FuncionarioStatusBadge status={funcionario.status} />
-            <span className="text-xs text-neutro-500">
+            <span className="text-caption text-muted-foreground">
               Admissão {dataBr(funcionario.data_admissao)}
               {funcionario.data_demissao && <> · Desligamento {dataBr(funcionario.data_demissao)}</>}
             </span>
@@ -116,7 +116,7 @@ export default async function FuncionarioFichaPage({
               <Info label="Jornada" value={funcionario.jornada} />
             </dl>
             {funcionario.candidato_origem_id && (
-              <p className="mt-3 text-xs text-neutro-500">
+              <p className="mt-3 text-caption text-muted-foreground">
                 Veio do funil de recrutamento:{" "}
                 <Link
                   href={`/candidatos/${funcionario.candidato_origem_id}`}

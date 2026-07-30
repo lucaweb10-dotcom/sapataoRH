@@ -48,14 +48,14 @@ export default async function EditarFuncionarioPage({
     <PageContainer>
       <Link
         href={`/funcionarios/${id}`}
-        className="inline-flex items-center gap-1.5 text-sm text-neutro-700 hover:text-neutro-900"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         {funcionario.nome_completo}
       </Link>
 
       <div className="mt-4 space-y-1">
-        <h1 className="font-display text-2xl font-bold">Editar funcionário</h1>
+        <h1 className="font-display text-display font-bold">Editar funcionário</h1>
       </div>
 
       <div className="mt-6 max-w-3xl">

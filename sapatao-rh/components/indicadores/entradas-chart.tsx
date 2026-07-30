@@ -8,47 +8,66 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { SemanaEntry } from "@/lib/indicadores/queries";
+
+/* Recharts recebe cor por prop, não por classe — os valores abaixo espelham
+ * os tokens do tema claro (neutro-200, neutro-500, neutro-100, brand-700). */
+const GRID = "#E7E2D6";
+const AXIS = "#8A8F82";
+const CURSOR = "#F1EDE4";
+const BAR = "#1C4A2E";
 
 export function EntradasChart({ dados }: { dados: SemanaEntry[] }) {
   const total = dados.reduce((s, d) => s + d.count, 0);
 
   return (
-    <div className="rounded-xl border border-neutro-200 bg-white p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-medium text-neutro-900">Entradas por semana</h3>
-          <p className="text-xs text-neutro-700">Últimas 8 semanas</p>
-        </div>
-        <span className="text-2xl font-bold text-neutro-900">{total}</span>
-      </div>
-      {total === 0 ? (
-        <p className="py-8 text-center text-sm text-neutro-700">Nenhum candidato no período.</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={dados} margin={{ top: 4, right: 0, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E7E2D6" vertical={false} />
-            <XAxis
-              dataKey="rotulo"
-              tick={{ fontSize: 11, fill: "#8A8F82" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fontSize: 11, fill: "#8A8F82" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              contentStyle={{ borderRadius: 8, border: "1px solid #E7E2D6", fontSize: 12 }}
-              cursor={{ fill: "#F1EDE4" }}
-              formatter={(value) => [value, "candidatos"]}
-            />
-            <Bar dataKey="count" fill="#1C4A2E" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Entradas por semana</CardTitle>
+        <CardDescription>Últimas 8 semanas</CardDescription>
+        <CardAction>
+          <span className="font-display text-3xl leading-none font-bold tabular">{total}</span>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {total === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum candidato no período.
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={dados} margin={{ top: 4, right: 0, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+              <XAxis
+                dataKey="rotulo"
+                tick={{ fontSize: 11, fill: AXIS }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: AXIS }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: 10, border: `1px solid ${GRID}`, fontSize: 12 }}
+                cursor={{ fill: CURSOR }}
+                formatter={(value) => [value, "candidatos"]}
+              />
+              <Bar dataKey="count" fill={BAR} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 }

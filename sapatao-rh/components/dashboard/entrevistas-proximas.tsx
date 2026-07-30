@@ -1,3 +1,7 @@
+import { CalendarX2, Laptop, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Section } from "@/components/ui/section";
 import type { EntrevistaProxima } from "@/lib/dashboard/queries";
 
 function formatDataHora(iso: string) {
@@ -18,34 +22,38 @@ function formatDataHora(iso: string) {
 
 export function EntrevistaProximas({ entrevistas }: { entrevistas: EntrevistaProxima[] }) {
   return (
-    <div>
-      <h2 className="mb-3 text-sm font-semibold text-neutro-900">Entrevistas nos próximos 7 dias</h2>
+    <Section title="Entrevistas nos próximos 7 dias">
       {entrevistas.length === 0 ? (
-        <p className="text-sm text-neutro-700">Nenhuma entrevista agendada.</p>
+        <EmptyState
+          icon={<CalendarX2 />}
+          title="Nenhuma entrevista agendada"
+          description="Agende pela ficha do candidato ou pelo card no funil."
+          className="py-10"
+        />
       ) : (
         <div className="space-y-2">
           {entrevistas.map((e) => (
             <div
               key={e.id}
-              className="flex items-center gap-3 rounded-lg border border-neutro-200 bg-white p-3"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-xs"
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-lg">
-                {e.formato === "online" ? "💻" : "📍"}
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700 [&_svg]:size-4">
+                {e.formato === "online" ? <Laptop /> : <MapPin />}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-neutro-900">{e.candidato_nome}</p>
-                <p className="text-xs text-neutro-700">
+                <p className="truncate text-sm font-medium text-foreground">{e.candidato_nome}</p>
+                <p className="text-caption text-muted-foreground">
                   {formatDataHora(e.data_hora)}
                   {e.local_ou_link && ` · ${e.local_ou_link}`}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full border border-neutro-200 px-2 py-0.5 text-xs text-neutro-700 capitalize">
+              <Badge variant="outline" className="shrink-0 capitalize">
                 {e.formato}
-              </span>
+              </Badge>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </Section>
   );
 }

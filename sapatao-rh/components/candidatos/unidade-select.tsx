@@ -43,8 +43,8 @@ export function UnidadeSelect({ candidatoId, unidadeAtualId, unidades, canEdit }
   if (!canEdit) {
     return (
       <div>
-        <p className="mb-1.5 text-xs font-medium text-neutro-700">Unidade</p>
-        <p className="text-sm text-neutro-900">{nomeAtual}</p>
+        <p className="mb-1.5 text-caption font-medium text-muted-foreground">Unidade</p>
+        <p className="text-sm text-foreground">{nomeAtual}</p>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export function UnidadeSelect({ candidatoId, unidadeAtualId, unidades, canEdit }
 
   return (
     <div>
-      <p className="mb-1.5 text-xs font-medium text-neutro-700">Unidade</p>
+      <p className="mb-1.5 text-caption font-medium text-muted-foreground">Unidade</p>
       <Select
         value={unidadeAtualId ?? SEM_UNIDADE}
         onValueChange={onChange}

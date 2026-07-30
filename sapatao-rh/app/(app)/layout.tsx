@@ -49,11 +49,11 @@ export default async function AppLayout({
         <Sidebar role={profile.role} profile={profile} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Suspense
-            fallback={<div className="h-14 shrink-0 border-b border-neutro-200 bg-card" />}
+            fallback={<div className="h-14 shrink-0 border-b border-border bg-card" />}
           >
             <Topbar profile={profile} unidades={visiveis} />
           </Suspense>
-          <main className="flex-1 overflow-hidden bg-neutro-50">{children}</main>
+          <main className="flex-1 overflow-hidden bg-muted">{children}</main>
         </div>
         <Toaster />
       </div>

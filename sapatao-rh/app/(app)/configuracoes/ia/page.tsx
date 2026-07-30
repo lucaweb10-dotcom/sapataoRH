@@ -99,8 +99,8 @@ export default async function ConfigIaPage() {
       <SettingsNav />
       <div className="space-y-6 max-w-2xl">
         <div>
-          <h1 className="font-display text-2xl font-bold">Inteligência Artificial</h1>
-          <p className="text-sm text-neutro-700 mt-1">
+          <h1 className="font-display text-display font-bold">Inteligência Artificial</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Configure como a IA avalia candidatos: a conexão com a OpenAI e os critérios de
             contratação da sua empresa.
           </p>
@@ -112,7 +112,7 @@ export default async function ConfigIaPage() {
               <Sparkles className="size-4" />
               Ative a análise de perfis com IA em 3 passos
             </p>
-            <ol className="mt-2 space-y-1 text-sm text-neutro-700">
+            <ol className="mt-2 space-y-1 text-sm text-muted-foreground">
               <li>{chaveConfigurada ? "✓" : "○"} Cole a sua chave da OpenAI e escolha o modelo</li>
               <li>{criteriosRespondidos ? "✓" : "○"} Cadastre os cargos e responda às perguntas estratégicas</li>
               <li>

@@ -29,8 +29,8 @@ function Info({ label, value }: { label: string; value: string | number | null |
   if (value === null || value === undefined || value === "") return null;
   return (
     <div>
-      <dt className="text-xs font-medium text-neutro-700">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutro-900">{value}</dd>
+      <dt className="text-caption font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }
@@ -144,7 +144,7 @@ export function CandidateModal({
               {candidato.tags.map((t) => (
                 <span
                   key={t}
-                  className="rounded-full border border-neutro-200 bg-neutro-50 px-2 py-0.5 text-xs text-neutro-700"
+                  className="rounded-full border border-border bg-muted px-2 py-0.5 text-caption text-muted-foreground"
                 >
                   {t}
                 </span>
@@ -153,20 +153,20 @@ export function CandidateModal({
           )}
 
           {/* Análise de IA */}
-          <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-3">
-            <p className="mb-2 text-xs font-medium text-neutro-700">Análise de IA</p>
+          <div className="rounded-lg border border-border bg-muted p-3">
+            <p className="mb-2 text-caption font-medium text-muted-foreground">Análise de IA</p>
             <ParecerView parecer={candidato.parecer_ia} score={candidato.score_ia} />
           </div>
 
           {/* Notas internas */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutro-700">Notas internas</label>
+            <label className="mb-1 block text-caption font-medium text-muted-foreground">Notas internas</label>
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               disabled={!canMove || pending}
               rows={3}
-              className="w-full rounded-lg border border-neutro-200 p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+              className="w-full rounded-lg border border-border p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               placeholder="Anotações da equipe…"
             />
             {canMove && (
@@ -181,36 +181,36 @@ export function CandidateModal({
           {/* Entrevista agendada */}
           {entrevista && (
             <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm">
-              <p className="mb-1 text-xs font-medium text-brand-700">Entrevista agendada</p>
-              <p className="font-medium text-neutro-900">
+              <p className="mb-1 text-caption font-medium text-brand-700">Entrevista agendada</p>
+              <p className="font-medium text-foreground">
                 {new Date(entrevista.data_hora).toLocaleString("pt-BR", {
                   dateStyle: "long",
                   timeStyle: "short",
                 })}
               </p>
-              <p className="text-neutro-700 capitalize">{entrevista.formato}</p>
+              <p className="text-muted-foreground capitalize">{entrevista.formato}</p>
               {entrevista.local_ou_link && (
-                <p className="mt-0.5 truncate text-neutro-700">{entrevista.local_ou_link}</p>
+                <p className="mt-0.5 truncate text-muted-foreground">{entrevista.local_ou_link}</p>
               )}
               {entrevista.observacoes && (
-                <p className="mt-1 text-neutro-700">{entrevista.observacoes}</p>
+                <p className="mt-1 text-muted-foreground">{entrevista.observacoes}</p>
               )}
             </div>
           )}
 
           {/* Histórico */}
           <div>
-            <p className="mb-1.5 text-xs font-medium text-neutro-700">Histórico de etapas</p>
+            <p className="mb-1.5 text-caption font-medium text-muted-foreground">Histórico de etapas</p>
             {historico.length === 0 ? (
-              <p className="text-sm text-neutro-700">Sem movimentações registradas.</p>
+              <p className="text-sm text-muted-foreground">Sem movimentações registradas.</p>
             ) : (
               <ul className="space-y-1.5">
                 {historico.map((h) => (
-                  <li key={h.id} className="text-xs text-neutro-700">
-                    <span className="text-neutro-900">{h.de_etapa_nome ?? nomeEtapa(h.de_etapa)}</span> →{" "}
-                    <span className="text-neutro-900">{h.para_etapa_nome ?? nomeEtapa(h.para_etapa)}</span>
+                  <li key={h.id} className="text-caption text-muted-foreground">
+                    <span className="text-foreground">{h.de_etapa_nome ?? nomeEtapa(h.de_etapa)}</span> →{" "}
+                    <span className="text-foreground">{h.para_etapa_nome ?? nomeEtapa(h.para_etapa)}</span>
                     {h.movido_por_nome && <> · {h.movido_por_nome}</>}
-                    <span className="text-neutro-700">
+                    <span className="text-muted-foreground">
                       {" "}
                       · {new Date(h.created_at).toLocaleString("pt-BR")}
                     </span>
@@ -222,7 +222,7 @@ export function CandidateModal({
         </div>
 
         {/* Ações */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-neutro-200 pt-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
           {candidato.conversationId ? (
             <Button
               size="sm"

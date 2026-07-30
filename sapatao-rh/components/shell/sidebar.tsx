@@ -43,8 +43,8 @@ export function Sidebar({ role, profile }: { role: Role; profile: Profile }) {
           S
         </div>
         <div className="leading-tight">
-          <div className="font-display text-base font-bold text-neutro-900">Sapatão</div>
-          <div className="text-[11px] font-medium tracking-wide text-neutro-500">RH</div>
+          <div className="font-display text-base font-bold text-foreground">Sapatão</div>
+          <div className="text-micro font-medium tracking-wide text-muted-foreground">RH</div>
         </div>
       </div>
 
@@ -61,10 +61,10 @@ export function Sidebar({ role, profile }: { role: Role; profile: Profile }) {
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
                   ? "bg-sidebar-accent text-brand-700 shadow-warm"
-                  : "text-neutro-700 hover:bg-neutro-100",
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
-              <Icon className={cn("size-[18px]", active ? "text-brand-700" : "text-neutro-500")} />
+              <Icon className={cn("size-[18px]", active ? "text-brand-700" : "text-muted-foreground")} />
               {item.label}
               {item.key === "chat" && <UnreadBadge />}
             </Link>
@@ -74,14 +74,14 @@ export function Sidebar({ role, profile }: { role: Role; profile: Profile }) {
 
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2.5 rounded-lg border border-sidebar-border bg-card px-3 py-2.5 shadow-warm">
-          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-700 text-xs font-bold text-neutro-50">
+          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-700 text-caption font-bold text-neutro-50">
             {initials(profile.nome)}
           </div>
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-[13px] font-semibold text-neutro-900">
+            <div className="truncate text-small font-semibold text-foreground">
               {profile.nome}
             </div>
-            <div className="text-[11px] capitalize text-neutro-500">{profile.role}</div>
+            <div className="text-micro capitalize text-muted-foreground">{profile.role}</div>
           </div>
         </div>
         <div className="pride-rule mx-1 mt-3" />

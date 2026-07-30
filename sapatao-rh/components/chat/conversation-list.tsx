@@ -102,11 +102,11 @@ export function ConversationList({
   }, [conversations, query, filtro, currentUserId]);
 
   return (
-    <div className="flex h-full flex-col border-r border-neutro-200 bg-white">
+    <div className="flex h-full flex-col border-r border-border bg-card">
       {/* Search header */}
-      <div className="border-b border-neutro-200 p-3">
+      <div className="border-b border-border p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="font-display text-sm font-semibold text-neutro-900">Atendimento</h2>
+          <h2 className="font-display text-sm font-semibold text-foreground">Atendimento</h2>
           <div className="flex items-center gap-1.5">
             <SomToggle />
             <NovaConversaDialog vagas={vagas} unidades={unidades} />
@@ -117,7 +117,7 @@ export function ConversationList({
           placeholder="Buscar candidato..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-8 w-full rounded-md border border-neutro-200 bg-neutro-50 px-3 text-sm text-neutro-900 placeholder:text-neutro-700 focus:border-sapatao-verde focus:outline-none"
+          className="h-8 w-full rounded-md border border-border bg-muted px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-sapatao-verde focus:outline-none"
         />
         <div className="mt-2 flex gap-1.5">
           {CHIPS.map(([valor, rotulo]) => (
@@ -126,10 +126,10 @@ export function ConversationList({
               type="button"
               onClick={() => setFiltro(valor)}
               className={cn(
-                "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
+                "rounded-full border px-2.5 py-0.5 text-caption font-medium transition-colors",
                 filtro === valor
                   ? "border-sapatao-verde bg-sapatao-verde/10 text-sapatao-verde"
-                  : "border-neutro-200 text-neutro-700 hover:bg-neutro-50",
+                  : "border-border text-muted-foreground hover:bg-muted",
               )}
             >
               {rotulo}
@@ -141,7 +141,7 @@ export function ConversationList({
       {/* List */}
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-neutro-700">
+          <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
             Nenhuma conversa encontrada.
           </div>
         ) : (
@@ -157,32 +157,32 @@ export function ConversationList({
                 key={conv.id}
                 href={hrefConversa(conv.id)}
                 className={cn(
-                  "flex items-start gap-3 border-b border-neutro-200 px-3 py-3 transition-colors hover:bg-neutro-50",
-                  isActive && "bg-neutro-50 border-l-2 border-l-sapatao-verde",
+                  "flex items-start gap-3 border-b border-border px-3 py-3 transition-colors hover:bg-muted",
+                  isActive && "bg-muted border-l-2 border-l-sapatao-verde",
                 )}
               >
                 <Avatar className="mt-0.5 shrink-0">
                   {conv.candidatos?.avatar_url ? (
                     <AvatarImage src={conv.candidatos.avatar_url} alt={nome} />
                   ) : null}
-                  <AvatarFallback className="bg-sapatao-verde text-white text-xs font-semibold">
+                  <AvatarFallback className="bg-sapatao-verde text-white text-caption font-semibold">
                     {initial}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="truncate text-sm font-medium text-neutro-900">{nome}</span>
-                    <span className="shrink-0 text-xs text-neutro-700">
+                    <span className="truncate text-sm font-medium text-foreground">{nome}</span>
+                    <span className="shrink-0 text-caption text-muted-foreground">
                       {relativeTime(conv.last_message_at)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-1">
-                    <p className="truncate text-xs text-neutro-700">
+                    <p className="truncate text-caption text-muted-foreground">
                       {conv.last_message_preview ?? "Sem mensagens"}
                     </p>
                     {unreadLabel && (
-                      <Badge className="shrink-0 h-4 min-w-[1rem] rounded-full bg-sapatao-verde px-1 text-[10px] text-white">
+                      <Badge className="shrink-0 h-4 min-w-[1rem] rounded-full bg-sapatao-verde px-1 text-micro text-white">
                         {unreadLabel}
                       </Badge>
                     )}
@@ -193,7 +193,7 @@ export function ConversationList({
                       {conv.candidatos.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full bg-neutro-50 border border-neutro-200 px-1.5 py-px text-[10px] text-neutro-700"
+                          className="rounded-full bg-muted border border-border px-1.5 py-px text-micro text-muted-foreground"
                         >
                           {tag}
                         </span>

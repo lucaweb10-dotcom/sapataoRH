@@ -30,7 +30,7 @@ function Campo({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-neutro-700">
+      <Label className="text-caption font-medium text-muted-foreground">
         {label}
         {obrigatorio && <span className="text-destructive"> *</span>}
       </Label>
@@ -81,8 +81,8 @@ export function FuncionarioForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <section className="rounded-xl border border-neutro-200 bg-card p-4 shadow-warm">
-        <h2 className="mb-4 text-sm font-semibold text-neutro-900">Dados pessoais</h2>
+      <section className="rounded-xl border border-border bg-card p-4 shadow-warm">
+        <h2 className="mb-4 text-sm font-semibold text-foreground">Dados pessoais</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Campo label="Nome completo" obrigatorio>
@@ -115,8 +115,8 @@ export function FuncionarioForm({
         </div>
       </section>
 
-      <section className="rounded-xl border border-neutro-200 bg-card p-4 shadow-warm">
-        <h2 className="mb-4 text-sm font-semibold text-neutro-900">Dados profissionais</h2>
+      <section className="rounded-xl border border-border bg-card p-4 shadow-warm">
+        <h2 className="mb-4 text-sm font-semibold text-foreground">Dados profissionais</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Cargo" obrigatorio>
             <Input

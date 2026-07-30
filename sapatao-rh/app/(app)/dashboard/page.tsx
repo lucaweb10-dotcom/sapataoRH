@@ -1,4 +1,5 @@
 import { PageContainer } from "@/components/shell/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 import { HojeCards } from "@/components/dashboard/hoje-cards";
 import { EntrevistaProximas } from "@/components/dashboard/entrevistas-proximas";
 import { CandidatosRecentes } from "@/components/dashboard/candidatos-recentes";
@@ -25,20 +26,16 @@ export default async function DashboardPage() {
 
   return (
     <PageContainer>
-      <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">
-          {saudacao}{profile?.nome ? `, ${profile.nome.split(" ")[0]}` : ""}!
-        </h1>
-        <p className="text-sm text-neutro-700">
-          {new Date().toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </p>
-      </div>
+      <PageHeader
+        title={`${saudacao}${profile?.nome ? `, ${profile.nome.split(" ")[0]}` : ""}!`}
+        description={new Date().toLocaleDateString("pt-BR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })}
+      />
 
-      <div className="mt-6 space-y-6">
+      <div className="space-y-8">
         <HojeCards resumo={resumo} />
 
         <div className="grid gap-6 lg:grid-cols-2">

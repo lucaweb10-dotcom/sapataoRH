@@ -94,9 +94,9 @@ export function FunilSwitcher({ funis, funilSelecionadoId, unidadesSemFunil }: P
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutro-200 bg-white p-4">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
       <div className="space-y-1">
-        <span className="text-xs font-medium text-neutro-700">Funil em edição</span>
+        <span className="text-caption font-medium text-muted-foreground">Funil em edição</span>
         <Select
           value={funilSelecionadoId}
           onValueChange={(v: string | null) => irPara(v)}
@@ -118,7 +118,7 @@ export function FunilSwitcher({ funis, funilSelecionadoId, unidadesSemFunil }: P
       {unidadesSemFunil.length > 0 && (
         <div className="flex items-end gap-2">
           <div className="space-y-1">
-            <span className="text-xs font-medium text-neutro-700">Nova unidade com funil próprio</span>
+            <span className="text-caption font-medium text-muted-foreground">Nova unidade com funil próprio</span>
             <Select
               value={novaUnidadeId}
               onValueChange={(v: string | null) => setNovaUnidadeId(v)}
@@ -147,7 +147,7 @@ export function FunilSwitcher({ funis, funilSelecionadoId, unidadesSemFunil }: P
         <div className="ml-auto flex items-center gap-2">
           {confirmandoExclusao ? (
             <>
-              <span className="text-xs text-neutro-600">Excluir este funil?</span>
+              <span className="text-caption text-muted-foreground">Excluir este funil?</span>
               <Button size="sm" variant="destructive" onClick={excluir} disabled={pending}>
                 Sim, excluir
               </Button>

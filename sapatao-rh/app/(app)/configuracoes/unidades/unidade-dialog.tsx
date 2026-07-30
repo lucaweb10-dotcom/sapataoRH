@@ -109,7 +109,7 @@ export function UnidadeDialog({ unidade }: { unidade?: UnidadeRow }) {
                 placeholder="Av. Brasil, 1234 — Roselândia"
               />
             </div>
-            <p className="text-xs text-neutro-500">
+            <p className="text-caption text-muted-foreground">
               O endereço também alimenta a análise de IA (distância do candidato até a unidade).
             </p>
           </div>

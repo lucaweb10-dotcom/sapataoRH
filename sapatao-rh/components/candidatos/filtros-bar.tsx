@@ -74,12 +74,12 @@ export function FiltrosBar({ etapas }: { etapas: FunilEtapa[] }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative w-full max-w-xs">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-neutro-500" />
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => onBusca(e.target.value)}
           placeholder="Buscar por nome ou telefone…"
-          className="pl-8"
+          className="pl-9"
           aria-label="Buscar candidato por nome ou telefone"
         />
       </div>

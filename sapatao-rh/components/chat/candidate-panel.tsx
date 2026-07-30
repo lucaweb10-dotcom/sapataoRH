@@ -47,8 +47,8 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   if (!value) return null;
   return (
     <div>
-      <dt className="text-xs font-medium text-neutro-700">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutro-900">{value}</dd>
+      <dt className="text-caption font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }
@@ -144,20 +144,20 @@ export function CandidatePanel({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto border-l border-neutro-200 bg-white">
+    <div className="flex h-full flex-col overflow-y-auto border-l border-border bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-neutro-200 p-4">
-        <h3 className="font-display text-sm font-semibold text-neutro-900">Candidato</h3>
+      <div className="flex items-center justify-between gap-2 border-b border-border p-4">
+        <h3 className="font-display text-sm font-semibold text-foreground">Candidato</h3>
         <div className="flex items-center gap-3">
           <Link
             href={candidato.unidade_id ? `/funil?u=${candidato.unidade_id}` : "/funil"}
-            className="text-xs font-medium text-brand-700 hover:underline"
+            className="text-caption font-medium text-brand-700 hover:underline"
           >
             Ver no funil
           </Link>
           <Link
             href={`/candidatos/${candidato.id}`}
-            className="text-xs font-medium text-brand-700 hover:underline"
+            className="text-caption font-medium text-brand-700 hover:underline"
           >
             Ver ficha
           </Link>
@@ -175,7 +175,7 @@ export function CandidatePanel({
         {/* Etapa do funil */}
         {etapas.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-medium text-neutro-700">Etapa do funil</p>
+            <p className="mb-1.5 text-caption font-medium text-muted-foreground">Etapa do funil</p>
             {canEdit ? (
               <Select
                 value={candidato.etapa_id}
@@ -194,7 +194,7 @@ export function CandidatePanel({
                 </SelectContent>
               </Select>
             ) : (
-              <p className="text-sm text-neutro-900">
+              <p className="text-sm text-foreground">
                 {etapas.find((e) => e.id === candidato.etapa_id)?.nome ?? "—"}
               </p>
             )}
@@ -203,7 +203,7 @@ export function CandidatePanel({
 
         {/* Vaga (autocomplete) */}
         <div>
-          <p className="mb-1.5 text-xs font-medium text-neutro-700">Vaga de interesse</p>
+          <p className="mb-1.5 text-caption font-medium text-muted-foreground">Vaga de interesse</p>
           {canEdit ? (
             <>
               <input
@@ -216,7 +216,7 @@ export function CandidatePanel({
                 list="sp6-vagas-painel"
                 disabled={pending}
                 placeholder="ex.: Atendente"
-                className="h-8 w-full rounded-md border border-neutro-200 bg-neutro-50 px-2.5 text-sm text-neutro-900 placeholder:text-neutro-500 focus:border-sapatao-verde focus:outline-none disabled:opacity-50"
+                className="h-8 w-full rounded-md border border-border bg-muted px-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-sapatao-verde focus:outline-none disabled:opacity-50"
               />
               <datalist id="sp6-vagas-painel">
                 {vagas.map((v) => (
@@ -225,13 +225,13 @@ export function CandidatePanel({
               </datalist>
             </>
           ) : (
-            <p className="text-sm text-neutro-900">{candidato.vaga_interesse ?? "—"}</p>
+            <p className="text-sm text-foreground">{candidato.vaga_interesse ?? "—"}</p>
           )}
         </div>
 
         {/* Responsável */}
         <div>
-          <p className="mb-1.5 text-xs font-medium text-neutro-700">Responsável</p>
+          <p className="mb-1.5 text-caption font-medium text-muted-foreground">Responsável</p>
           {canEdit ? (
             <Select
               value={candidato.atribuido_a ?? NINGUEM}
@@ -259,7 +259,7 @@ export function CandidatePanel({
               </SelectContent>
             </Select>
           ) : (
-            <p className="text-sm text-neutro-900">
+            <p className="text-sm text-foreground">
               {responsaveis.find((r) => r.id === candidato.atribuido_a)?.nome ?? "Ninguém"}
             </p>
           )}
@@ -277,12 +277,12 @@ export function CandidatePanel({
 
         {/* Tags (chips editáveis) */}
         <div>
-          <p className="mb-1.5 text-xs font-medium text-neutro-700">Tags</p>
+          <p className="mb-1.5 text-caption font-medium text-muted-foreground">Tags</p>
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 rounded-full border border-neutro-200 bg-neutro-50 px-2 py-0.5 text-xs text-neutro-900"
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-caption text-foreground"
               >
                 {tag}
                 {canEdit && (
@@ -291,7 +291,7 @@ export function CandidatePanel({
                     aria-label={`Remover tag ${tag}`}
                     onClick={() => removeTag(tag)}
                     disabled={pending}
-                    className="text-neutro-500 hover:text-neutro-900 disabled:opacity-50"
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                   >
                     <X className="size-3" />
                   </button>
@@ -299,7 +299,7 @@ export function CandidatePanel({
               </span>
             ))}
             {tags.length === 0 && !canEdit && (
-              <span className="text-xs text-neutro-500">Sem tags</span>
+              <span className="text-caption text-muted-foreground">Sem tags</span>
             )}
           </div>
           {canEdit && (
@@ -314,7 +314,7 @@ export function CandidatePanel({
               }}
               disabled={pending}
               placeholder="Nova tag + Enter"
-              className="mt-1.5 h-7 w-full rounded-md border border-neutro-200 bg-neutro-50 px-2.5 text-xs text-neutro-900 placeholder:text-neutro-500 focus:border-sapatao-verde focus:outline-none disabled:opacity-50"
+              className="mt-1.5 h-7 w-full rounded-md border border-border bg-muted px-2.5 text-caption text-foreground placeholder:text-muted-foreground focus:border-sapatao-verde focus:outline-none disabled:opacity-50"
             />
           )}
         </div>
@@ -332,16 +332,16 @@ export function CandidatePanel({
         {/* Notas internas */}
         {candidato.notas_internas && (
           <div>
-            <p className="mb-1 text-xs font-medium text-neutro-700">Notas internas</p>
-            <p className="whitespace-pre-wrap text-sm text-neutro-900">
+            <p className="mb-1 text-caption font-medium text-muted-foreground">Notas internas</p>
+            <p className="whitespace-pre-wrap text-sm text-foreground">
               {candidato.notas_internas}
             </p>
           </div>
         )}
 
         {/* Análise de IA (SP3b) */}
-        <div className="rounded-lg border border-neutro-200 bg-neutro-50 p-3 space-y-3">
-          <p className="text-xs font-medium text-neutro-700">Análise de IA</p>
+        <div className="rounded-lg border border-border bg-muted p-3 space-y-3">
+          <p className="text-caption font-medium text-muted-foreground">Análise de IA</p>
           {conversationId && (
             <AnalisarPerfilButton
               conversationId={conversationId}

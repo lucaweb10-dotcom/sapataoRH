@@ -14,7 +14,7 @@ export function TempoChip({ desde }: { desde: string | null }) {
   const tempo = tempoNaEtapa(desde, agora);
   if (!tempo) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-neutro-500">
+    <span className="inline-flex items-center gap-1 text-caption text-muted-foreground">
       <Clock className="size-3" />
       {tempo === "agora" ? "agora" : `há ${tempo}`}
     </span>

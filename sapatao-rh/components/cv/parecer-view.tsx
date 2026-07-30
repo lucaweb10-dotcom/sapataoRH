@@ -4,10 +4,10 @@ import { scoreFaixa } from "@/lib/funil/scoring";
 import { dataHoraBr } from "@/lib/shared/datas";
 
 const FAIXA_COR: Record<string, string> = {
-  sem: "text-neutro-700",
-  baixo: "text-red-600",
-  medio: "text-amber-600",
-  alto: "text-green-600",
+  sem: "text-muted-foreground",
+  baixo: "text-danger",
+  medio: "text-warning",
+  alto: "text-success",
 };
 
 const VERDICT_LABEL: Record<Parecer["verdict"], string> = {
@@ -20,8 +20,8 @@ function Lista({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="text-xs font-medium text-neutro-700">{title}</p>
-      <ul className="mt-0.5 list-disc pl-4 text-sm text-neutro-900">
+      <p className="text-caption font-medium text-muted-foreground">{title}</p>
+      <ul className="mt-0.5 list-disc pl-4 text-sm text-foreground">
         {items.map((it, i) => (
           <li key={i}>{it}</li>
         ))}
@@ -60,7 +60,7 @@ export function ParecerView({
 }) {
   const parsed = parecer ? parecerSchema.safeParse(parecer) : null;
   if (!parsed || !parsed.success) {
-    return <p className="text-sm text-neutro-700">Sem análise de IA ainda.</p>;
+    return <p className="text-sm text-muted-foreground">Sem análise de IA ainda.</p>;
   }
   const p = parsed.data;
   const faixa = scoreFaixa(score ?? p.score);
@@ -69,20 +69,20 @@ export function ParecerView({
     <div className="space-y-3">
       <div className="flex items-center gap-3">
         <span className={`text-3xl font-bold ${FAIXA_COR[faixa]}`}>{p.score}</span>
-        <span className="rounded-full border border-neutro-200 px-2 py-0.5 text-xs font-medium text-neutro-700">
+        <span className="rounded-full border border-border px-2 py-0.5 text-caption font-medium text-muted-foreground">
           {VERDICT_LABEL[p.verdict]}
         </span>
       </div>
 
-      <p className="text-sm text-neutro-900">{p.resumo}</p>
+      <p className="text-sm text-foreground">{p.resumo}</p>
 
       {p.criterios_atendidos.length > 0 && (
         <ul className="space-y-1">
           {p.criterios_atendidos.map((c, i) => (
-            <li key={i} className="flex gap-1.5 text-xs">
-              <span className={c.atendido ? "text-green-600" : "text-red-600"}>{c.atendido ? "✓" : "✗"}</span>
-              <span className="text-neutro-900">{c.criterio}</span>
-              {c.evidencia && <span className="text-neutro-700">— {c.evidencia}</span>}
+            <li key={i} className="flex gap-1.5 text-caption">
+              <span className={c.atendido ? "text-success" : "text-danger"}>{c.atendido ? "✓" : "✗"}</span>
+              <span className="text-foreground">{c.criterio}</span>
+              {c.evidencia && <span className="text-muted-foreground">— {c.evidencia}</span>}
             </li>
           ))}
         </ul>
@@ -93,15 +93,15 @@ export function ParecerView({
 
       {p.experiencia_relevante && (
         <div>
-          <p className="text-xs font-medium text-neutro-700">Experiência relevante</p>
-          <p className="mt-0.5 text-sm text-neutro-900">{p.experiencia_relevante}</p>
+          <p className="text-caption font-medium text-muted-foreground">Experiência relevante</p>
+          <p className="mt-0.5 text-sm text-foreground">{p.experiencia_relevante}</p>
         </div>
       )}
 
       <Lista title="Perguntas para entrevista" items={p.perguntas_sugeridas_entrevista} />
 
       {origem && (
-        <p className="border-t border-neutro-200 pt-2 text-[11px] text-neutro-500">{origemLabel(origem)}</p>
+        <p className="border-t border-border pt-2 text-micro text-muted-foreground">{origemLabel(origem)}</p>
       )}
     </div>
   );

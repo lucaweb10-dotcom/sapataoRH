@@ -71,7 +71,7 @@ export function FunilFiltros({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative w-full max-w-56">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-neutro-500" />
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => onBusca(e.target.value)}

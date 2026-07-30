@@ -179,7 +179,7 @@ export function UnreadBadge() {
   const naoLidas = useNaoLidas();
   if (naoLidas <= 0) return null;
   return (
-    <span className="ml-auto rounded-full bg-sapatao-verde px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
+    <span className="ml-auto rounded-full bg-sapatao-verde px-1.5 py-0.5 text-micro leading-none font-bold text-white">
       {naoLidas > 99 ? "99+" : naoLidas}
     </span>
   );

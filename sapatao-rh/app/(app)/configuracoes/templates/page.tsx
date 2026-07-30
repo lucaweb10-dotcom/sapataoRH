@@ -26,8 +26,8 @@ export default async function TemplatesConfigPage() {
     <PageContainer>
       <SettingsNav />
       <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">Templates</h1>
-        <p className="text-sm text-neutro-700">
+        <h1 className="font-display text-display font-bold">Templates</h1>
+        <p className="text-sm text-muted-foreground">
           Mensagens prontas do WhatsApp. As variáveis {"{{nome}}"}, {"{{vaga}}"} e {"{{unidade}}"}{" "}
           são preenchidas com os dados do candidato.
         </p>

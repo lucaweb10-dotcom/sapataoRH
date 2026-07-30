@@ -37,28 +37,28 @@ function EtapaRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      className="flex items-center gap-3 rounded-lg border border-neutro-200 bg-white p-3"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab px-1 text-neutro-700 active:cursor-grabbing"
+        className="cursor-grab px-1 text-muted-foreground active:cursor-grabbing"
         aria-label="Arrastar para reordenar"
       >
         ⠿
       </button>
       <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: etapa.cor }} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-neutro-900">{etapa.nome}</p>
-        <div className="mt-0.5 flex flex-wrap gap-1 text-[10px] text-neutro-700">
+        <p className="truncate text-sm font-medium text-foreground">{etapa.nome}</p>
+        <div className="mt-0.5 flex flex-wrap gap-1 text-micro text-muted-foreground">
           {etapa.is_terminal && (
-            <span className="rounded bg-neutro-100 px-1.5 py-0.5">Terminal · {etapa.status_destino}</span>
+            <span className="rounded bg-muted px-1.5 py-0.5">Terminal · {etapa.status_destino}</span>
           )}
-          {etapa.requires_confirm && <span className="rounded bg-neutro-100 px-1.5 py-0.5">Confirma</span>}
-          {etapa.sla_dias != null && <span className="rounded bg-neutro-100 px-1.5 py-0.5">SLA {etapa.sla_dias}d</span>}
-          {isIa && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">usada pela IA</span>}
-          <span className="rounded bg-neutro-100 px-1.5 py-0.5">
+          {etapa.requires_confirm && <span className="rounded bg-muted px-1.5 py-0.5">Confirma</span>}
+          {etapa.sla_dias != null && <span className="rounded bg-muted px-1.5 py-0.5">SLA {etapa.sla_dias}d</span>}
+          {isIa && <span className="rounded bg-warning-soft px-1.5 py-0.5 text-warning-foreground">usada pela IA</span>}
+          <span className="rounded bg-muted px-1.5 py-0.5">
             {count} candidato{count === 1 ? "" : "s"}
           </span>
         </div>
@@ -66,7 +66,7 @@ function EtapaRow({
       <EtapaFormDialog funilId={funilId} etapa={etapa} />
       {confirming ? (
         <div className="flex items-center gap-1">
-          <span className="text-xs text-neutro-700">Confirmar?</span>
+          <span className="text-caption text-muted-foreground">Confirmar?</span>
           <Button
             size="sm"
             variant="ghost"

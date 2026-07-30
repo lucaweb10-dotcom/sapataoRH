@@ -38,8 +38,8 @@ export default async function UnidadesConfigPage() {
       <SettingsNav />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="font-display text-2xl font-bold">Unidades</h1>
-          <p className="text-sm text-neutro-700">
+          <h1 className="font-display text-display font-bold">Unidades</h1>
+          <p className="text-sm text-muted-foreground">
             Os postos/lojas da empresa. Cada unidade pode ter o próprio funil (criado em
             Configurações &gt; Funil) e aparece nos filtros do Kanban, candidatos e funcionários.
           </p>
@@ -47,25 +47,25 @@ export default async function UnidadesConfigPage() {
         <UnidadeDialog />
       </div>
 
-      <div className="mt-6 rounded-lg border border-neutro-200 bg-white">
+      <div className="mt-6 rounded-lg border border-border bg-card">
         {unidades.length === 0 ? (
-          <p className="p-6 text-sm text-neutro-600">Nenhuma unidade cadastrada ainda.</p>
+          <p className="p-6 text-sm text-muted-foreground">Nenhuma unidade cadastrada ainda.</p>
         ) : (
-          <ul className="divide-y divide-neutro-100">
+          <ul className="divide-y divide-border-subtle">
             {unidades.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`text-sm font-medium ${u.ativa ? "text-neutro-900" : "text-neutro-500 line-through"}`}
+                    className={`text-sm font-medium ${u.ativa ? "text-foreground" : "text-muted-foreground line-through"}`}
                   >
                     {u.nome}
                     {u.temFunil && (
-                      <span className="ml-2 rounded-full border border-sapatao-verde/30 bg-sapatao-verde/10 px-2 py-0.5 text-[11px] font-medium text-sapatao-verde">
+                      <span className="ml-2 rounded-full border border-sapatao-verde/30 bg-sapatao-verde/10 px-2 py-0.5 text-micro font-medium text-sapatao-verde">
                         funil próprio
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-neutro-500">
+                  <p className="text-caption text-muted-foreground">
                     {[u.endereco, u.cidade].filter(Boolean).join(" · ") || "Sem endereço cadastrado"}
                   </p>
                 </div>

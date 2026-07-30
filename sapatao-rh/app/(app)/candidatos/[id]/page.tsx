@@ -31,16 +31,16 @@ function Info({ label, value }: { label: string; value: string | number | null |
   if (value === null || value === undefined || value === "") return null;
   return (
     <div>
-      <dt className="text-xs font-medium text-neutro-700">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutro-900">{value}</dd>
+      <dt className="text-caption font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-neutro-200 bg-card p-4 shadow-warm">
-      <h2 className="mb-3 text-sm font-semibold text-neutro-900">{titulo}</h2>
+    <section className="rounded-xl border border-border bg-card p-4 shadow-warm">
+      <h2 className="mb-3 text-sm font-semibold text-foreground">{titulo}</h2>
       {children}
     </section>
   );
@@ -107,7 +107,7 @@ export default async function CandidatoFichaPage({
     <PageContainer>
       <Link
         href="/candidatos"
-        className="inline-flex items-center gap-1.5 text-sm text-neutro-700 hover:text-neutro-900"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         Candidatos
@@ -125,8 +125,8 @@ export default async function CandidatoFichaPage({
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="font-display text-2xl font-bold">{candidato.nome}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutro-700">
+            <h1 className="font-display text-display font-bold">{candidato.nome}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>{candidato.telefone}</span>
               <StatusBadge status={candidato.status} />
               {etapaAtual && (
@@ -205,7 +205,7 @@ export default async function CandidatoFichaPage({
                 {candidato.tags.map((t) => (
                   <span
                     key={t}
-                    className="rounded-full border border-neutro-200 bg-neutro-50 px-2 py-0.5 text-xs text-neutro-700"
+                    className="rounded-full border border-border bg-muted px-2 py-0.5 text-caption text-muted-foreground"
                   >
                     {t}
                   </span>
@@ -241,35 +241,35 @@ export default async function CandidatoFichaPage({
 
           {entrevista && (
             <Secao titulo="Entrevista agendada">
-              <p className="text-sm font-medium text-neutro-900">
+              <p className="text-sm font-medium text-foreground">
                 {new Date(entrevista.data_hora).toLocaleString("pt-BR", {
                   dateStyle: "long",
                   timeStyle: "short",
                 })}
               </p>
-              <p className="text-sm capitalize text-neutro-700">{entrevista.formato}</p>
+              <p className="text-sm capitalize text-muted-foreground">{entrevista.formato}</p>
               {entrevista.local_ou_link && (
-                <p className="mt-0.5 truncate text-sm text-neutro-700">
+                <p className="mt-0.5 truncate text-sm text-muted-foreground">
                   {entrevista.local_ou_link}
                 </p>
               )}
               {entrevista.observacoes && (
-                <p className="mt-1 text-sm text-neutro-700">{entrevista.observacoes}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{entrevista.observacoes}</p>
               )}
             </Secao>
           )}
 
           <Secao titulo="Histórico de etapas">
             {historico.length === 0 ? (
-              <p className="text-sm text-neutro-700">Sem movimentações registradas.</p>
+              <p className="text-sm text-muted-foreground">Sem movimentações registradas.</p>
             ) : (
               <ul className="space-y-1.5">
                 {historico.map((h) => (
-                  <li key={h.id} className="text-xs text-neutro-700">
-                    <span className="text-neutro-900">{nomeEtapa(h.de_etapa)}</span> →{" "}
-                    <span className="text-neutro-900">{nomeEtapa(h.para_etapa)}</span>
+                  <li key={h.id} className="text-caption text-muted-foreground">
+                    <span className="text-foreground">{nomeEtapa(h.de_etapa)}</span> →{" "}
+                    <span className="text-foreground">{nomeEtapa(h.para_etapa)}</span>
                     {h.movido_por_nome && <> · {h.movido_por_nome}</>}
-                    <span className="text-neutro-700">
+                    <span className="text-muted-foreground">
                       {" "}
                       · {new Date(h.created_at).toLocaleString("pt-BR")}
                     </span>

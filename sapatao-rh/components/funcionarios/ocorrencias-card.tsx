@@ -30,8 +30,8 @@ const TIPO_COR: Record<OcorrenciaTipo, string> = {
   atestado: "bg-[#f8ecd9] text-[#a9692a]",
   advertencia: "bg-[#fbe6df] text-[#c0492b]",
   elogio: "bg-brand-50 text-brand-700",
-  desligamento: "bg-neutro-100 text-neutro-600",
-  outro: "bg-neutro-100 text-neutro-600",
+  desligamento: "bg-muted text-muted-foreground",
+  outro: "bg-muted text-muted-foreground",
 };
 
 const TIPOS_REGISTRAVEIS: OcorrenciaTipo[] = ["falta", "atestado", "advertencia", "elogio", "outro"];
@@ -106,23 +106,23 @@ export function OcorrenciasCard({
       )}
 
       {ocorrencias.length === 0 ? (
-        <p className="text-sm text-neutro-700">Nenhuma ocorrência registrada.</p>
+        <p className="text-sm text-muted-foreground">Nenhuma ocorrência registrada.</p>
       ) : (
         <ul className="space-y-2">
           {ocorrencias.map((o) => (
             <li key={o.id} className="flex items-start gap-2 text-sm">
               <span
-                className={`mt-0.5 inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${TIPO_COR[o.tipo]}`}
+                className={`mt-0.5 inline-flex shrink-0 rounded-full px-2 py-0.5 text-micro font-medium ${TIPO_COR[o.tipo]}`}
               >
                 {TIPO_LABEL[o.tipo]}
               </span>
               <div className="min-w-0">
-                <p className="text-neutro-900">
+                <p className="text-foreground">
                   <span className="tabular-nums">{dataBr(o.data)}</span>
                   {o.observacao && <> — {o.observacao}</>}
                 </p>
                 {o.registrado_por_nome && (
-                  <p className="text-xs text-neutro-500">por {o.registrado_por_nome}</p>
+                  <p className="text-caption text-muted-foreground">por {o.registrado_por_nome}</p>
                 )}
               </div>
             </li>

@@ -52,22 +52,22 @@ export function InativarDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-neutro-700">Data de desligamento</Label>
+            <Label className="text-caption font-medium text-muted-foreground">Data de desligamento</Label>
             <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-neutro-700">Motivo</Label>
+            <Label className="text-caption font-medium text-muted-foreground">Motivo</Label>
             <textarea
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-neutro-200 p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="w-full rounded-lg border border-border p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               placeholder="Pedido de demissão, término de contrato…"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-neutro-200 pt-3">
+        <div className="flex justify-end gap-2 border-t border-border pt-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancelar
           </Button>

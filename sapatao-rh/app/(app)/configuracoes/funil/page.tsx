@@ -50,8 +50,8 @@ export default async function FunilConfigPage({
     <PageContainer>
       <SettingsNav />
       <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">Funil</h1>
-        <p className="text-sm text-neutro-700">
+        <h1 className="font-display text-display font-bold">Funil</h1>
+        <p className="text-sm text-muted-foreground">
           O funil Geral é o template da empresa (e recebe candidatos sem unidade). Cada unidade
           pode ter o próprio funil, criado a partir dele e ajustado à vontade.
         </p>
@@ -69,7 +69,7 @@ export default async function FunilConfigPage({
         {funil && funil.etapas.length > 0 ? (
           <FunilEditor funilId={funil.funil.id} etapas={funil.etapas} counts={counts} />
         ) : (
-          <p className="text-sm text-neutro-700">Nenhum funil configurado para esta empresa.</p>
+          <p className="text-sm text-muted-foreground">Nenhum funil configurado para esta empresa.</p>
         )}
       </div>
     </PageContainer>

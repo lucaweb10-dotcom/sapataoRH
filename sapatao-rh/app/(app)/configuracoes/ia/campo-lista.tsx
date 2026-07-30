@@ -15,21 +15,21 @@ export function Pergunta({ numero, label, recomendado, explicativo, children }: 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sapatao-verde/10 text-[11px] font-semibold text-sapatao-verde">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sapatao-verde/10 text-micro font-semibold text-sapatao-verde">
           {numero}
         </span>
-        <span className="text-sm font-medium text-neutro-900">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] ${
+          className={`rounded-full px-2 py-0.5 text-micro ${
             recomendado
               ? "bg-sapatao-verde/10 text-sapatao-verde"
-              : "bg-neutro-100 text-neutro-600"
+              : "bg-muted text-muted-foreground"
           }`}
         >
           {recomendado ? "Recomendado" : "Opcional"}
         </span>
       </div>
-      <p className="text-sm text-neutro-600">{explicativo}</p>
+      <p className="text-sm text-muted-foreground">{explicativo}</p>
       {children}
     </div>
   );
@@ -53,9 +53,9 @@ export function CampoLista({ value, onChange, placeholder, rows = 3, ariaLabel }
         placeholder={placeholder}
         rows={rows}
         aria-label={ariaLabel}
-        className="w-full resize-y rounded-md border border-neutro-200 px-3 py-2 text-sm"
+        className="w-full resize-y rounded-md border border-border px-3 py-2 text-sm"
       />
-      <p className="text-xs text-neutro-400">Um critério por linha.</p>
+      <p className="text-caption text-muted-foreground">Um critério por linha.</p>
     </div>
   );
 }

@@ -44,7 +44,7 @@ export function PromptPreview({ gerais, cargos }: Props) {
       {aberto && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-neutro-500">Prompt para a vaga:</span>
+            <span className="text-caption text-muted-foreground">Prompt para a vaga:</span>
             <Select
               value={cargoIdValido}
               items={{
@@ -66,10 +66,10 @@ export function PromptPreview({ gerais, cargos }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <p className="text-xs text-neutro-500">
+          <p className="text-caption text-muted-foreground">
             Pré-visualização ao vivo — reflete o que está na tela, mesmo antes de salvar.
           </p>
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-neutro-200 bg-neutro-50 p-3 font-mono text-xs text-neutro-700">
+          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted p-3 font-mono text-caption text-muted-foreground">
             {texto}
           </pre>
         </div>

@@ -1,4 +1,6 @@
 import { PageContainer } from "@/components/shell/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { ResumoCards } from "@/components/indicadores/resumo-cards";
 import { FunilSnapshot } from "@/components/indicadores/funil-snapshot";
 import { EntradasChart } from "@/components/indicadores/entradas-chart";
@@ -34,20 +36,19 @@ export default async function IndicadoresPage({
 
   return (
     <PageContainer>
-      <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">Indicadores</h1>
-        <p className="text-sm text-neutro-700">Visão geral do recrutamento e seleção.</p>
-      </div>
+      <PageHeader
+        title="Indicadores"
+        description="Visão geral do recrutamento e seleção."
+      />
 
-      <div className="mt-6 space-y-6">
+      <div className="space-y-8">
         <Suspense>
           <ResumoCards resumo={resumo} periodo={periodo} />
         </Suspense>
 
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-neutro-900">Snapshot do funil</h2>
+        <Section title="Snapshot do funil">
           <FunilSnapshot etapas={etapas} />
-        </div>
+        </Section>
 
         <EntradasChart dados={entradas} />
       </div>

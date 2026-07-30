@@ -93,7 +93,7 @@ export function TemplateFormDialog({ template }: { template?: MessageTemplate })
                   <option key={c} value={c} />
                 ))}
               </datalist>
-              <p className="mt-1 text-xs text-neutro-500">
+              <p className="mt-1 text-caption text-muted-foreground">
                 &ldquo;saudacao&rdquo; é usada no pré-preenchimento de novas conversas.
               </p>
             </div>
@@ -104,15 +104,15 @@ export function TemplateFormDialog({ template }: { template?: MessageTemplate })
                 onChange={(e) => setConteudo(e.target.value)}
                 rows={5}
                 maxLength={2000}
-                className="w-full rounded-lg border border-neutro-200 p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="w-full rounded-lg border border-border p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 placeholder={"Olá {{nome}}! Vi seu interesse na vaga {{vaga}}…"}
               />
-              <p className="mt-1 text-xs text-neutro-500">
+              <p className="mt-1 text-caption text-muted-foreground">
                 Variáveis: {"{{nome}}"} (primeiro nome), {"{{vaga}}"} e {"{{unidade}}"} — sem
                 valor, somem do texto.
               </p>
             </div>
-            <label className="flex items-center gap-2 text-sm text-neutro-900">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={ativo}

@@ -105,7 +105,7 @@ export function EtapaFormDialog({ funilId, etapa }: { funilId: string; etapa?: F
                   type="color"
                   value={cor}
                   onChange={(e) => setCor(e.target.value)}
-                  className="h-8 w-14 rounded border border-neutro-200"
+                  className="h-8 w-14 rounded border border-border"
                 />
               </div>
               <div className="flex-1">
@@ -120,7 +120,7 @@ export function EtapaFormDialog({ funilId, etapa }: { funilId: string; etapa?: F
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-neutro-900">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={requiresConfirm}
@@ -129,7 +129,7 @@ export function EtapaFormDialog({ funilId, etapa }: { funilId: string; etapa?: F
               Exigir confirmação ao mover para esta etapa
             </label>
 
-            <label className="flex items-center gap-2 text-sm text-neutro-900">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={isTerminal}

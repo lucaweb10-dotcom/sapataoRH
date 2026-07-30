@@ -16,27 +16,27 @@ function TemplateRow({
 }) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-neutro-200 bg-white p-3">
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-sm font-medium text-neutro-900">{template.nome}</p>
-          <span className="rounded bg-neutro-100 px-1.5 py-0.5 text-[10px] text-neutro-700">
+          <p className="truncate text-sm font-medium text-foreground">{template.nome}</p>
+          <span className="rounded bg-muted px-1.5 py-0.5 text-micro text-muted-foreground">
             {template.categoria ?? "geral"}
           </span>
           {!template.ativo && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 text-micro text-warning-foreground">
               inativo
             </span>
           )}
         </div>
-        <p className="mt-1 line-clamp-2 text-xs whitespace-pre-wrap text-neutro-700">
+        <p className="mt-1 line-clamp-2 text-caption whitespace-pre-wrap text-muted-foreground">
           {template.conteudo}
         </p>
       </div>
       <TemplateFormDialog template={template} />
       {confirming ? (
         <div className="flex items-center gap-1">
-          <span className="text-xs text-neutro-700">Confirmar?</span>
+          <span className="text-caption text-muted-foreground">Confirmar?</span>
           <Button
             size="sm"
             variant="ghost"
@@ -87,7 +87,7 @@ export function TemplatesEditor({ templates }: { templates: MessageTemplate[] })
         <TemplateFormDialog />
       </div>
       {templates.length === 0 ? (
-        <p className="text-sm text-neutro-700">
+        <p className="text-sm text-muted-foreground">
           Nenhum template ainda. Crie o primeiro — sugestão: um de categoria &ldquo;saudacao&rdquo;, usado no
           pré-preenchimento de novas conversas.
         </p>

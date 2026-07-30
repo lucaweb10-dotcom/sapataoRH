@@ -231,7 +231,7 @@ export function NovoCandidatoDialog({
             </div>
 
             {duplicado && (
-              <p className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
+              <p className="rounded-lg border border-warning/25 bg-warning-soft p-2.5 text-caption text-warning-foreground">
                 Já existe um candidato com este telefone.{" "}
                 {duplicado.id ? (
                   <Link

@@ -156,7 +156,7 @@ export function EditarCandidatoDialog({
                 inputMode="tel"
               />
               {temConversa && (
-                <p className="mt-1 text-xs text-neutro-500">
+                <p className="mt-1 text-caption text-muted-foreground">
                   Travado: telefone é a identidade do WhatsApp após a 1ª conversa.
                 </p>
               )}

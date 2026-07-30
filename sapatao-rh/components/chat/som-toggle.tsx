@@ -37,7 +37,7 @@ export function SomToggle() {
       onClick={alternar}
       aria-label={ligado ? "Desligar som de notificação" : "Ligar som de notificação"}
       title={ligado ? "Som de notificação: ligado" : "Som de notificação: desligado"}
-      className="flex size-7 items-center justify-center rounded-md text-neutro-700 transition-colors hover:bg-neutro-100"
+      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
     >
       {ligado ? <Bell className="size-4" /> : <BellOff className="size-4" />}
     </button>

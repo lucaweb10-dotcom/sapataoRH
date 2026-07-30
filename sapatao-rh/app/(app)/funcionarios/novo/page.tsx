@@ -63,21 +63,21 @@ export default async function NovoFuncionarioPage({
     <PageContainer>
       <Link
         href={candidatoId ? `/candidatos/${candidatoId}` : "/funcionarios"}
-        className="inline-flex items-center gap-1.5 text-sm text-neutro-700 hover:text-neutro-900"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         {candidatoId ? "Ficha do candidato" : "Funcionários"}
       </Link>
 
       <div className="mt-4 space-y-1">
-        <h1 className="font-display text-2xl font-bold">Novo funcionário</h1>
+        <h1 className="font-display text-display font-bold">Novo funcionário</h1>
         {candidatoNome ? (
-          <p className="text-sm text-neutro-700">
+          <p className="text-sm text-muted-foreground">
             Promovendo o candidato <span className="font-medium">{candidatoNome}</span> — confira
             os dados e complete o que falta.
           </p>
         ) : (
-          <p className="text-sm text-neutro-700">Cadastro manual de funcionário.</p>
+          <p className="text-sm text-muted-foreground">Cadastro manual de funcionário.</p>
         )}
       </div>
 

@@ -92,25 +92,25 @@ export function NovaConversaDialog({
               autoFocus
             />
             {buscando ? (
-              <p className="text-sm text-neutro-700">Buscando…</p>
+              <p className="text-sm text-muted-foreground">Buscando…</p>
             ) : resultados.length === 0 ? (
-              <p className="text-sm text-neutro-700">
+              <p className="text-sm text-muted-foreground">
                 {q.trim().length < 2
                   ? "Digite ao menos 2 caracteres para buscar."
                   : "Nenhum candidato sem conversa encontrado."}
               </p>
             ) : (
-              <ul className="max-h-64 divide-y divide-neutro-100 overflow-y-auto">
+              <ul className="max-h-64 divide-y divide-border-subtle overflow-y-auto">
                 {resultados.map((cand) => (
                   <li key={cand.id}>
                     <button
                       type="button"
                       onClick={() => abrirConversa(cand.id)}
                       disabled={pendingId !== null}
-                      className="flex w-full items-center justify-between gap-2 px-1 py-2 text-left text-sm hover:bg-neutro-50 disabled:opacity-50"
+                      className="flex w-full items-center justify-between gap-2 px-1 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
                     >
-                      <span className="truncate font-medium text-neutro-900">{cand.nome}</span>
-                      <span className="shrink-0 text-xs text-neutro-700">
+                      <span className="truncate font-medium text-foreground">{cand.nome}</span>
+                      <span className="shrink-0 text-caption text-muted-foreground">
                         {pendingId === cand.id ? "Abrindo…" : cand.telefone}
                       </span>
                     </button>
@@ -118,7 +118,7 @@ export function NovaConversaDialog({
                 ))}
               </ul>
             )}
-            <div className="border-t border-neutro-200 pt-3">
+            <div className="border-t border-border pt-3">
               <Button
                 size="sm"
                 variant="ghost"

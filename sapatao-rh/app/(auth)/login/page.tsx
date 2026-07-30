@@ -10,10 +10,10 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signIn, null);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutro-50 p-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted p-4">
       <form
         action={formAction}
-        className="w-full max-w-sm overflow-hidden rounded-2xl border border-neutro-200 bg-card shadow-warm-md"
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-warm-md"
       >
         <div className="pride-rule" />
         <div className="space-y-5 p-8">
@@ -22,8 +22,8 @@ export default function LoginPage() {
               S
             </div>
             <div className="space-y-0.5">
-              <h1 className="font-display text-2xl font-bold text-brand-700">Sapatão RH</h1>
-              <p className="text-sm text-neutro-600">Acesse sua conta</p>
+              <h1 className="font-display text-display font-bold text-brand-700">Sapatão RH</h1>
+              <p className="text-sm text-muted-foreground">Acesse sua conta</p>
             </div>
           </div>
 

@@ -26,9 +26,9 @@ export function NotasCard({
 
   if (!canEdit) {
     return notas ? (
-      <p className="whitespace-pre-wrap text-sm text-neutro-900">{notas}</p>
+      <p className="whitespace-pre-wrap text-sm text-foreground">{notas}</p>
     ) : (
-      <p className="text-sm text-neutro-500">Sem anotações.</p>
+      <p className="text-sm text-muted-foreground">Sem anotações.</p>
     );
   }
 
@@ -39,7 +39,7 @@ export function NotasCard({
         onChange={(e) => setNotas(e.target.value)}
         disabled={pending}
         rows={4}
-        className="w-full rounded-lg border border-neutro-200 p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+        className="w-full rounded-lg border border-border p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
         placeholder="Anotações da equipe…"
       />
       <div className="mt-1.5 flex justify-end">

@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import { Columns3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getCurrentProfile } from "@/lib/auth/current-profile";
 import { getFunilDaUnidade, listCandidatosDoFunil } from "@/lib/funil/queries";
 import { parseFunilFiltros } from "@/lib/funil/filtros";
@@ -39,8 +42,13 @@ export default async function FunilPage({
 
   if (!funil || funil.etapas.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-neutro-700">
-        Nenhum funil configurado para esta empresa.
+      <div className="flex h-full items-center justify-center p-6">
+        <EmptyState
+          icon={<Columns3 />}
+          title="Nenhum funil configurado"
+          description="Crie as etapas em Configurações › Funil para começar a mover candidatos."
+          className="w-full max-w-md"
+        />
       </div>
     );
   }
@@ -63,21 +71,15 @@ export default async function FunilPage({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutro-200 bg-card px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-5 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1 className="font-display text-lg font-bold">Funil</h1>
+          <h1 className="font-display text-section font-bold">Funil</h1>
           {unidadeSelecionada && (
-            <span
-              className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                funilDaUnidade
-                  ? "border-sapatao-verde/30 bg-sapatao-verde/10 text-sapatao-verde"
-                  : "border-neutro-200 bg-neutro-50 text-neutro-600"
-              }`}
-            >
+            <Badge variant={funilDaUnidade ? "success" : "outline"}>
               {funilDaUnidade
                 ? `Funil da unidade ${unidadeSelecionada.nome}`
                 : `${unidadeSelecionada.nome} — usando o funil Geral`}
-            </span>
+            </Badge>
           )}
           <FunilFiltros vagas={vagas} responsaveis={responsaveis} />
         </div>

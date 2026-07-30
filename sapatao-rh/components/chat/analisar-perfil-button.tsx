@@ -124,7 +124,7 @@ export function AnalisarPerfilButton({
     <div className="space-y-2">
       {cargos.length > 0 && (
         <div className="space-y-1">
-          <span className="text-xs font-medium text-neutro-700">Analisar para a vaga:</span>
+          <span className="text-caption font-medium text-muted-foreground">Analisar para a vaga:</span>
           <Select
             value={cargoId}
             items={Object.fromEntries(cargos.map((c) => [c.id, c.nome]))}
@@ -167,16 +167,16 @@ export function AnalisarPerfilButton({
       </Button>
 
       {analisando ? (
-        <div aria-busy="true" className="space-y-0.5 text-xs text-neutro-500">
+        <div aria-busy="true" className="space-y-0.5 text-caption text-muted-foreground">
           <p>{FRASES[fraseIdx]}</p>
           <p>Pode levar até 1 minuto. Você pode continuar navegando.</p>
         </div>
       ) : precisaEscolherCargo ? (
-        <p className="text-xs text-neutro-500">Escolha o cargo para liberar a análise.</p>
+        <p className="text-caption text-muted-foreground">Escolha o cargo para liberar a análise.</p>
       ) : jaTemParecer ? (
-        <p className="text-xs text-neutro-500">O parecer atual será substituído.</p>
+        <p className="text-caption text-muted-foreground">O parecer atual será substituído.</p>
       ) : cargos.length === 0 ? (
-        <p className="text-xs text-neutro-500">
+        <p className="text-caption text-muted-foreground">
           Análise geral —{" "}
           {isAdmin ? (
             <a href="/configuracoes/ia" className="text-sapatao-verde hover:underline">

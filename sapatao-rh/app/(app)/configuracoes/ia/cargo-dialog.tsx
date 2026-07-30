@@ -148,7 +148,7 @@ export function CargoDialog({ cargo, open, onOpenChange }: Props) {
               aria-label="Contexto do cargo"
               placeholder="Atendimento na pista: abastecimento, troca de óleo simples, cortesia com o cliente."
               rows={3}
-              className="w-full resize-y rounded-md border border-neutro-200 px-3 py-2 text-sm"
+              className="w-full resize-y rounded-md border border-border px-3 py-2 text-sm"
             />
           </Pergunta>
         </div>

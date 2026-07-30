@@ -83,31 +83,31 @@ export function IntegracaoForm({ apiKeyMascarada, modeloAtual, limiteAtual }: Pr
   }
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-4">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
       <div>
-        <h2 className="font-semibold text-neutro-900">Integração com a OpenAI</h2>
-        <p className="text-sm text-neutro-600 mt-0.5">
+        <h2 className="font-semibold text-foreground">Integração com a OpenAI</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
           A análise de currículos e perfis usa os modelos GPT da OpenAI, pagos por uso. A chave
           nunca é exibida depois de salva.
         </p>
       </div>
 
       <label className="block space-y-1">
-        <span className="text-sm font-medium text-neutro-700">Chave da API (API key)</span>
+        <span className="text-sm font-medium text-muted-foreground">Chave da API (API key)</span>
         <input
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder={apiKeyMascarada ?? "sk-proj-..."}
           autoComplete="off"
-          className="w-full rounded-md border border-neutro-200 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm"
         />
         {apiKeyMascarada && !apiKey ? (
-          <span className="text-xs text-neutro-500">
+          <span className="text-caption text-muted-foreground">
             Já configurada ({apiKeyMascarada}). Preencha para substituir.
           </span>
         ) : !apiKeyMascarada ? (
-          <span className="text-xs text-neutro-500">
+          <span className="text-caption text-muted-foreground">
             Crie uma chave em{" "}
             <a
               href="https://platform.openai.com/api-keys"
@@ -123,7 +123,7 @@ export function IntegracaoForm({ apiKeyMascarada, modeloAtual, limiteAtual }: Pr
       </label>
 
       <div className="space-y-1">
-        <span className="text-sm font-medium text-neutro-700">Modelo da IA</span>
+        <span className="text-sm font-medium text-muted-foreground">Modelo da IA</span>
         <Select
           value={modelo}
           items={Object.fromEntries(MODELOS_OPENAI.map((m) => [m.value, m.label]))}
@@ -137,17 +137,17 @@ export function IntegracaoForm({ apiKeyMascarada, modeloAtual, limiteAtual }: Pr
               <SelectItem key={m.value} value={m.value}>
                 <span className="flex flex-col">
                   <span className="text-sm">{m.label}</span>
-                  <span className="text-xs text-neutro-500">{m.descricao}</span>
+                  <span className="text-caption text-muted-foreground">{m.descricao}</span>
                 </span>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {modeloInfo && <p className="text-xs text-neutro-500">{modeloInfo.descricao}</p>}
+        {modeloInfo && <p className="text-caption text-muted-foreground">{modeloInfo.descricao}</p>}
       </div>
 
       <label className="block space-y-1">
-        <span className="text-sm font-medium text-neutro-700">Limite mensal de tokens</span>
+        <span className="text-sm font-medium text-muted-foreground">Limite mensal de tokens</span>
         <input
           type="number"
           min={0}
@@ -155,15 +155,15 @@ export function IntegracaoForm({ apiKeyMascarada, modeloAtual, limiteAtual }: Pr
           value={limite}
           onChange={(e) => setLimite(e.target.value)}
           placeholder="500000"
-          className="w-full rounded-md border border-neutro-200 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm"
         />
-        <span className="block text-xs text-neutro-500">
+        <span className="block text-caption text-muted-foreground">
           Cada análise consome de 4 a 8 mil tokens (conversas longas e com áudios consomem mais).
           Com 500.000 tokens/mês dá para fazer de 60 a 120 análises — cerca de US$ 9 a 18 no modelo
           Terra. Ao atingir o limite, novas análises são bloqueadas até o mês virar.
         </span>
         {limite.trim() === "" && (
-          <span className="block text-xs text-amber-600">
+          <span className="block text-caption text-warning">
             Sem limite definido — as análises não serão bloqueadas por consumo. Recomendamos definir
             um teto.
           </span>

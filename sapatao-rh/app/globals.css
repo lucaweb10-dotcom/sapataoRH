@@ -4,6 +4,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+ * Sapatão — Design System
+ *
+ * Três camadas, nesta ordem de preferência ao escrever tela:
+ *   1. token semântico  (bg-card, text-muted-foreground, border-border)  ← use este
+ *   2. escala de marca  (bg-brand-500, text-neutro-700)                  ← só em componente de UI
+ *   3. valor cru        (#fff, red-500)                                  ← nunca
+ *
+ * Superfícies: background (papel) → card (branco) → muted (taupe, hover/zebra).
+ * Sombras: xs em card, sm em card com hover, md em popover, lg em modal.
+ * ------------------------------------------------------------------------- */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -27,6 +39,8 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -40,6 +54,21 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Status — tons quentes, alinhados ao papel. `-soft` é fundo, o par é texto/ícone. */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--destructive);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-foreground: var(--info-foreground);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -82,6 +111,36 @@
   --color-sapatao-terracota: #cf8a4a;
   --color-sapatao-laranja: #e85d2f;
   --color-sapatao-amarelo: #ffd500;
+
+  /* Elevação — sombra quente (verde-terra), nunca cinza-azulada.
+   * xs: card em repouso · sm: card interativo em hover · md: popover/dropdown · lg: modal */
+  --shadow-2xs: 0 1px 1px rgba(32, 37, 31, 0.04);
+  --shadow-xs: 0 1px 2px rgba(32, 37, 31, 0.05), 0 1px 1px rgba(32, 37, 31, 0.04);
+  --shadow-sm: 0 2px 6px rgba(32, 37, 31, 0.06), 0 1px 2px rgba(32, 37, 31, 0.05);
+  --shadow-md: 0 8px 20px rgba(32, 37, 31, 0.08), 0 2px 6px rgba(32, 37, 31, 0.05);
+  --shadow-lg: 0 20px 40px rgba(32, 37, 31, 0.12), 0 6px 12px rgba(32, 37, 31, 0.06);
+  --shadow-xl: 0 28px 56px rgba(32, 37, 31, 0.16);
+
+  /* Tipografia — escala fechada. Nada de text-[10px] avulso.
+   * display/section usam Fraunces; o resto, Inter. */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.45;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+  --text-section: 1.125rem;
+  --text-section--line-height: 1.35;
+  --text-section--letter-spacing: -0.01em;
+  --text-display: 1.75rem;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+
+  /* Movimento */
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Largura útil de página — evita a tabela esticar de ponta a ponta em 1440px+ */
+  --container-page: 88rem;
 }
 
 :root {
@@ -101,8 +160,24 @@
   --accent-foreground: #20251f;
   --destructive: #c0492b;
   --border: #e7e2d6;
+  --border-subtle: #f1ede4;
+  --border-strong: #d8d2c4;
   --input: #d8d2c4;
   --ring: #1c4a2e;
+
+  /* Status */
+  --success: #2d6a4f;
+  --success-soft: #e3ede6;
+  --success-foreground: #1c4a2e;
+  --warning: #b5732a;
+  --warning-soft: #f7ead9;
+  --warning-foreground: #8a5418;
+  --danger-soft: #f8e4de;
+  --danger-foreground: #94331b;
+  --info: #3d6b7a;
+  --info-soft: #e2edf0;
+  --info-foreground: #2c5260;
+
   --chart-1: #1c4a2e;
   --chart-2: #2d6a4f;
   --chart-3: #cf8a4a;
@@ -119,38 +194,55 @@
   --sidebar-ring: #1c4a2e;
 }
 
+/* Verde-noite — mesma identidade, invertida. Ainda sem toggle na UI;
+ * existe para que telas novas já nasçam corretas quando ligarmos. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #171a15;
+  --foreground: #f1ede4;
+  --card: #20251f;
+  --card-foreground: #f1ede4;
+  --popover: #20251f;
+  --popover-foreground: #f1ede4;
+  --primary: #5c8c6e;
+  --primary-foreground: #0f2b1a;
+  --secondary: #2a3028;
+  --secondary-foreground: #f1ede4;
+  --muted: #2a3028;
+  --muted-foreground: #b9b4a6;
+  --accent: #2a3028;
+  --accent-foreground: #f1ede4;
+  --destructive: #e07a5f;
+  --border: #343a31;
+  --border-subtle: #2a3028;
+  --border-strong: #454c41;
+  --input: #3f463c;
+  --ring: #5c8c6e;
+
+  --success: #8fb39c;
+  --success-soft: #22301f;
+  --success-foreground: #d6e4da;
+  --warning: #d99a52;
+  --warning-soft: #33281c;
+  --warning-foreground: #f0d3af;
+  --danger-soft: #38211b;
+  --danger-foreground: #f0bfb0;
+  --info: #7ba6b5;
+  --info-soft: #1d2a2e;
+  --info-foreground: #c5dbe2;
+
+  --chart-1: #8fb39c;
+  --chart-2: #5c8c6e;
+  --chart-3: #cf8a4a;
+  --chart-4: #e0a96d;
+  --chart-5: #8a8f82;
+  --sidebar: #1c201a;
+  --sidebar-foreground: #f1ede4;
+  --sidebar-primary: #8fb39c;
+  --sidebar-primary-foreground: #0f2b1a;
+  --sidebar-accent: #20251f;
+  --sidebar-accent-foreground: #8fb39c;
+  --sidebar-border: #343a31;
+  --sidebar-ring: #5c8c6e;
 }
 
 @layer base {
@@ -163,6 +255,12 @@
   html {
     @apply font-sans;
   }
+  /* Números de KPI, valores e datas nunca "dançam" ao atualizar. */
+  .tabular,
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer components {
@@ -173,11 +271,11 @@
     background: linear-gradient(90deg, #cf8a4a 0%, #ffd500 35%, #3a9e63 70%, #1c4a2e 100%);
     opacity: 0.85;
   }
-  /* Sombra quente (tom esverdeado-marrom em vez de cinza-azulado) */
+  /* Aliases da escala de elevação — mantidos para o código que já os usa. */
   .shadow-warm {
-    box-shadow: 0 1px 2px rgba(28, 40, 30, 0.05), 0 1px 1px rgba(28, 40, 30, 0.04);
+    box-shadow: var(--shadow-xs);
   }
   .shadow-warm-md {
-    box-shadow: 0 4px 12px rgba(28, 40, 30, 0.08);
+    box-shadow: var(--shadow-sm);
   }
 }

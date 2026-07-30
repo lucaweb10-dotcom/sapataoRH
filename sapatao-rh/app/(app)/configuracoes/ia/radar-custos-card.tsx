@@ -37,55 +37,55 @@ export function RadarCustosCard({ tokensUsados, custoMesUsd, limite, totalAnalis
   const mesLabel = new Date().toLocaleDateString("pt-BR", { timeZone: TZ_BR, month: "long", year: "numeric" });
   const pct = limite ? Math.min(100, Math.round((tokensUsados / limite) * 100)) : null;
   const corBarra =
-    pct === null ? "" : pct >= 100 ? "bg-sapatao-laranja" : pct >= 70 ? "bg-amber-500" : "bg-sapatao-verde";
+    pct === null ? "" : pct >= 100 ? "bg-danger" : pct >= 70 ? "bg-warning" : "bg-success";
   const deCvOk = totalAnalises - dePerfilOk;
   const custoMedio = totalAnalises > 0 ? custoMesUsd / totalAnalises : 0;
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-4">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-semibold text-neutro-900">Radar de custos</h2>
-        <span className="text-xs text-neutro-500">{mesLabel}</span>
+        <h2 className="font-semibold text-foreground">Radar de custos</h2>
+        <span className="text-caption text-muted-foreground">{mesLabel}</span>
       </div>
 
       {totalAnalises === 0 && tokensUsados === 0 ? (
-        <p className="text-sm text-neutro-600">
+        <p className="text-sm text-muted-foreground">
           Nenhuma análise este mês. O consumo real reportado pela OpenAI aparece aqui a cada
           análise.
         </p>
       ) : (
         <>
           <div>
-            <p className="text-2xl font-bold text-neutro-900">
+            <p className="text-2xl font-bold text-foreground">
               {fmtUsd(custoMesUsd)}{" "}
-              <span className="text-sm font-normal text-neutro-500">
+              <span className="text-sm font-normal text-muted-foreground">
                 ≈ {fmtBrl(custoMesUsd * USD_BRL_APROX)}
               </span>
             </p>
-            <p className="text-xs text-neutro-500">
+            <p className="text-caption text-muted-foreground">
               Custo do mês, estimado pela tabela de preços dos modelos e pelo uso real reportado
               pela OpenAI em cada chamada.
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm text-neutro-900">
+            <p className="text-sm text-foreground">
               {limite
                 ? `${fmtInt(tokensUsados)} de ${fmtInt(limite)} tokens usados`
                 : `${fmtInt(tokensUsados)} tokens usados (sem limite definido)`}
             </p>
             {pct !== null && (
-              <div className="h-2 rounded-full bg-neutro-100">
+              <div className="h-2 rounded-full bg-muted">
                 <div className={`h-2 rounded-full ${corBarra}`} style={{ width: `${pct}%` }} />
               </div>
             )}
             {pct !== null && pct >= 100 && (
-              <p className="text-xs font-medium text-sapatao-laranja">
+              <p className="text-caption font-medium text-sapatao-laranja">
                 Limite atingido — novas análises estão bloqueadas até o próximo mês. Aumente o
                 limite acima para liberar.
               </p>
             )}
-            <p className="text-xs text-neutro-500">
+            <p className="text-caption text-muted-foreground">
               {totalAnalises === 1 ? "1 análise concluída" : `${totalAnalises} análises concluídas`}
               {totalAnalises > 0 && ` (${dePerfilOk} de perfil, ${deCvOk} de currículo)`}
               {totalAnalises > 0 && ` · custo médio ${fmtUsd(custoMedio)}/análise`}
@@ -94,13 +94,13 @@ export function RadarCustosCard({ tokensUsados, custoMesUsd, limite, totalAnalis
 
           {ultimas.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-neutro-700">Últimas análises</p>
-              <ul className="divide-y divide-neutro-100 text-xs text-neutro-600">
+              <p className="text-caption font-medium text-muted-foreground">Últimas análises</p>
+              <ul className="divide-y divide-border-subtle text-caption text-muted-foreground">
                 {ultimas.map((a, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-x-2 py-1.5">
-                    <span className="text-neutro-500">{dataHoraCurta(a.quando)}</span>
+                    <span className="text-muted-foreground">{dataHoraCurta(a.quando)}</span>
                     <span>{a.origem === "perfil" ? "Perfil da conversa" : "Currículo"}</span>
-                    {a.cargo && <span className="rounded-full bg-neutro-50 border border-neutro-200 px-1.5">{a.cargo}</span>}
+                    {a.cargo && <span className="rounded-full bg-muted border border-border px-1.5">{a.cargo}</span>}
                     {a.status !== "ok" && <span className="text-sapatao-laranja">({a.status})</span>}
                     <span className="ml-auto">
                       {a.modelo ?? "—"} · {a.tokens === null ? "—" : fmtInt(a.tokens)} tokens

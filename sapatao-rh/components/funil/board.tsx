@@ -32,14 +32,14 @@ function Column({
   const fg = contrastText(etapa.cor);
   const badgeBg = fg === "#ffffff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.12)";
   return (
-    <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-neutro-200 bg-neutro-50 shadow-warm">
+    <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xs">
       <div
-        className="flex items-center gap-2 px-3.5 py-2.5"
+        className="flex items-center gap-2 px-4 py-3"
         style={{ backgroundColor: etapa.cor, color: fg }}
       >
-        <span className="truncate text-sm font-bold">{etapa.nome}</span>
+        <span className="truncate font-display text-sm font-bold">{etapa.nome}</span>
         <span
-          className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
+          className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-caption font-bold tabular"
           style={{ backgroundColor: badgeBg }}
         >
           {count}
@@ -47,8 +47,8 @@ function Column({
       </div>
       <div
         ref={setNodeRef}
-        className={`flex-1 space-y-2 overflow-y-auto p-2 transition-colors ${
-          isOver ? "bg-neutro-200/60" : ""
+        className={`flex-1 space-y-2 overflow-y-auto p-2.5 transition-colors duration-200 ease-soft ${
+          isOver ? "bg-muted" : ""
         }`}
       >
         {children}
@@ -152,7 +152,7 @@ export function Board({
           />
         ))}
         {list.length === 0 && (
-          <p className="px-1 py-8 text-center text-xs text-neutro-500">Vazio</p>
+          <p className="px-1 py-8 text-center text-caption text-muted-foreground">Vazio</p>
         )}
       </Column>
     );

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { Users } from "lucide-react";
 import { PageContainer } from "@/components/shell/page-container";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { FiltrosBar } from "@/components/candidatos/filtros-bar";
 import { NovoCandidatoDialog } from "@/components/candidatos/novo-candidato-dialog";
 import { CandidatosTabela, type EtapaInfo } from "@/components/candidatos/tabela";
@@ -53,38 +55,38 @@ export default async function CandidatosPage({
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="font-display text-2xl font-bold">Candidatos</h1>
-          <p className="text-sm text-neutro-700">
-            Base completa de quem já se candidatou — inclui contratados, reprovados e desistentes.
-          </p>
-        </div>
-        {canCreate && <NovoCandidatoDialog vagas={vagas} unidades={unidades} aoCriar="ficha" />}
-      </div>
+      <PageHeader
+        title="Candidatos"
+        description="Base completa de quem já se candidatou — inclui contratados, reprovados e desistentes."
+        actions={
+          canCreate ? (
+            <NovoCandidatoDialog vagas={vagas} unidades={unidades} aoCriar="ficha" />
+          ) : undefined
+        }
+      />
 
-      <div className="mt-6 space-y-4">
+      <div className="space-y-4">
         <FiltrosBar etapas={etapas} />
 
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutro-200 bg-card px-6 py-14 text-center">
-            <Users className="size-8 text-neutro-400" />
-            {temFiltro ? (
-              <>
-                <p className="text-sm text-neutro-700">
-                  Nenhum candidato encontrado com esses filtros.
-                </p>
+          temFiltro ? (
+            <EmptyState
+              icon={<Users />}
+              title="Nenhum candidato encontrado"
+              description="Nenhum resultado para os filtros aplicados."
+              action={
                 <Button size="sm" variant="outline" render={<Link href="/candidatos" />}>
                   Limpar filtros
                 </Button>
-              </>
-            ) : (
-              <p className="max-w-sm text-sm text-neutro-700">
-                Nenhum candidato ainda. Eles entram aqui automaticamente quando mandam mensagem no
-                WhatsApp da empresa.
-              </p>
-            )}
-          </div>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={<Users />}
+              title="Nenhum candidato ainda"
+              description="Eles entram aqui automaticamente quando mandam mensagem no WhatsApp da empresa."
+            />
+          )
         ) : (
           <>
             <CandidatosTabela rows={rows} etapasById={etapasById} />

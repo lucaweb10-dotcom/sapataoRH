@@ -64,12 +64,12 @@ export function CriteriosGeraisForm({ gerais, cargosAtivos }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-neutro-200 bg-white p-6 space-y-6">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-6">
       <div>
-        <h2 className="font-semibold text-neutro-900">
-          Como a sua empresa contrata? <span className="font-normal text-neutro-500">(vale para todas as vagas)</span>
+        <h2 className="font-semibold text-foreground">
+          Como a sua empresa contrata? <span className="font-normal text-muted-foreground">(vale para todas as vagas)</span>
         </h2>
-        <p className="text-sm text-neutro-600 mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Estas respostas viram as instruções da IA — é praticamente o &quot;prompt&quot; dela.
           Quanto mais específicas, mais o parecer reflete o jeito da empresa de contratar. Você
           pode ajustar quando quiser: as mudanças valem para as próximas análises.
@@ -102,7 +102,7 @@ export function CriteriosGeraisForm({ gerais, cargosAtivos }: Props) {
             onChange={(e) => setDistancia(e.target.value)}
             aria-label="Distância máxima aceita"
             placeholder="Até 17 minutos (ou ~8 km) da unidade"
-            className="w-full rounded-md border border-neutro-200 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
           <CampoLista
             ariaLabel="Unidades da empresa (nome e endereço)"
@@ -124,7 +124,7 @@ export function CriteriosGeraisForm({ gerais, cargosAtivos }: Props) {
           aria-label="Contexto extra da empresa"
           placeholder="Somos uma rede de 3 postos com conveniência 24h. Valorizamos simpatia no atendimento e proatividade. Oferecemos vale-transporte e cesta básica."
           rows={4}
-          className="w-full resize-y rounded-md border border-neutro-200 px-3 py-2 text-sm"
+          className="w-full resize-y rounded-md border border-border px-3 py-2 text-sm"
         />
       </Pergunta>
 
@@ -134,7 +134,7 @@ export function CriteriosGeraisForm({ gerais, cargosAtivos }: Props) {
         <Button onClick={handleSalvar} disabled={saving || !dirty}>
           {saving ? "Salvando..." : "Salvar critérios gerais"}
         </Button>
-        {dirty && <span className="text-xs text-amber-600">Alterações não salvas.</span>}
+        {dirty && <span className="text-caption text-warning">Alterações não salvas.</span>}
       </div>
     </div>
   );
